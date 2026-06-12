@@ -3,9 +3,9 @@
   "configurations": [
     {
       "name": "static",
-      "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8765"],
-      "port": 8765
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "python -m http.server %PORT%"],
+      "autoPort": true
     }
   ]
 }

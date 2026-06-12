@@ -119,7 +119,8 @@ void main(){
   vec3 wdir = normalize(vWorld - uCam);
   float ds = max(uDepth, 1e-4);
   // テクスチャ空間 (u, v, depth) でのレイ方向
-  vec3 dir = vec3(wdir.x * 0.5 * uTile, wdir.z * 0.5 * uTile, -wdir.y / ds);
+  // u = (x+1)/2*tile, v = (1-z)/2*tile なので v 成分は z の符号反転
+  vec3 dir = vec3(wdir.x * 0.5 * uTile, -wdir.z * 0.5 * uTile, -wdir.y / ds);
   if(dir.z < 1e-5){ outColor = vec4(0.0); return; }
   dir /= dir.z;                       // dir.z = 1 (深さ単位で前進)
   float rr = length(dir.xy);
@@ -150,14 +151,14 @@ void main(){
   float hz = hAt(p.xy + vec2(0.0, e.y)) - hAt(p.xy - vec2(0.0, e.y));
   float kx = (hx * ds) / (2.0 * e.x * (2.0 / uTile));
   float kz = (hz * ds) / (2.0 * e.y * (2.0 / uTile));
-  vec3 N = normalize(vec3(-kx, 1.0, -kz));
+  vec3 N = normalize(vec3(-kx, 1.0, kz));   // dv/dz < 0 なので z 成分は符号反転
 
   // --- ライティング ---
   vec3 L = normalize(uLight);
   float diff = max(dot(N, L), 0.0);
   float lit = 1.0;
   if(uShadow && diff > 0.0 && L.y > 0.05){
-    vec3 ld = vec3(L.x * 0.5 * uTile, L.z * 0.5 * uTile, -L.y / ds);
+    vec3 ld = vec3(L.x * 0.5 * uTile, -L.z * 0.5 * uTile, -L.y / ds);
     ld /= -ld.z;                      // ld.z = -1 (上方向へ)
     float t0 = p.z;
     for(int i = 1; i <= 24; i++){
