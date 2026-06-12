@@ -5,8 +5,16 @@ const canvas = $("glcanvas");
 const gl = canvas.getContext("webgl2", { antialias: true });
 if(!gl){ $("glError").hidden = false; return; }
 
-const generator = new ConeMapGenerator(gl);
-const viewer = new Viewer(gl, canvas);
+let generator, viewer;
+try {
+  generator = new ConeMapGenerator(gl);
+  viewer = new Viewer(gl, canvas);
+} catch(err) {
+  const e = $("glError");
+  e.textContent = err.message || String(err);
+  e.hidden = false;
+  throw err;
+}
 
 let srcImage = null;   // Image または canvas
 let processed = null;  // { canvas, maxH, n }

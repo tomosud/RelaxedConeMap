@@ -9,6 +9,9 @@ class ConeMapGenerator {
   constructor(gl){
     this.gl = gl;
     this.BATCH = 128;
+    this.floatColorExt = gl.getExtension("EXT_color_buffer_float");
+    if(!this.floatColorExt)
+      throw new Error("EXT_color_buffer_float is required for R16F cone buffers.");
     this.prog = glProgram(gl, SHADERS.fsqVS, SHADERS.genFS);
     this.compProg = glProgram(gl, SHADERS.fsqVS, SHADERS.compFS);
     const u = n => gl.getUniformLocation(this.prog, n);
@@ -24,6 +27,7 @@ class ConeMapGenerator {
     this.smpRepeat = makeSampler(gl, gl.REPEAT, gl.LINEAR);
     this.smpClamp = makeSampler(gl, gl.CLAMP_TO_EDGE, gl.LINEAR);
     this.size = 0;
+    this.coneTexOpts = { internalFormat: gl.R16F, format: gl.RED, type: gl.HALF_FLOAT };
     this.heightTex = null;
     this.ping = [null, null];
     this.fbo = [null, null];
@@ -48,7 +52,7 @@ class ConeMapGenerator {
       [this.fbo[0], this.fbo[1], this.exportFbo]
         .forEach(f => f && gl.deleteFramebuffer(f));
       this.heightTex = makeTex(gl, n, n);
-      this.ping = [makeTex(gl, n, n), makeTex(gl, n, n)];
+      this.ping = [makeTex(gl, n, n, this.coneTexOpts), makeTex(gl, n, n, this.coneTexOpts)];
       this.fbo = [makeFBO(gl, this.ping[0]), makeFBO(gl, this.ping[1])];
       this.exportTex = makeTex(gl, n, n);
       this.exportFbo = makeFBO(gl, this.exportTex);
@@ -138,7 +142,7 @@ class ConeMapGenerator {
   _syncGPU(){
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo[this.cur]);
-    gl.readPixels(0, 0, 1, 1, gl.RGBA, gl.UNSIGNED_BYTE, this._syncBuf || (this._syncBuf = new Uint8Array(4)));
+    gl.readPixels(0, 0, 1, 1, gl.RED, gl.FLOAT, this._syncBuf || (this._syncBuf = new Float32Array(1)));
   }
 
   // budgetMs を目安にパスを進める (フレーム毎に呼ぶ)

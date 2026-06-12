@@ -45,6 +45,7 @@ class Viewer {
       coneSteps: u("uConeSteps"), shadow: u("uShadow"), mode: u("uMode"),
     };
     this.smp = makeSampler(gl, gl.REPEAT, gl.LINEAR);
+    this.coneSmp = makeSampler(gl, gl.REPEAT, gl.NEAREST);
     this.yaw = 0.6;
     this.pitch = 0.95;
     this.dist = 2.6;
@@ -109,7 +110,7 @@ class Viewer {
     gl.bindSampler(0, this.smp);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, coneTex);
-    gl.bindSampler(1, this.smp);
+    gl.bindSampler(1, this.coneSmp);
     gl.uniform1i(this.u.height, 0);
     gl.uniform1i(this.u.cone, 1);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
