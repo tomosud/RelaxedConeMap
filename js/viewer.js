@@ -40,16 +40,36 @@ class Viewer {
     this.prog = glProgram(gl, SHADERS.viewVS, SHADERS.viewFS);
     const u = n => gl.getUniformLocation(this.prog, n);
     this.u = {
-      vp: u("uVP"), height: u("uHeight"), cone: u("uCone"), cam: u("uCam"),
-      light: u("uLight"), depth: u("uDepth"), tile: u("uTile"),
-      coneSteps: u("uConeSteps"), shadow: u("uShadow"), mode: u("uMode"),
+      vp: u("uVP"), height: u("uHeight"), cone: u("uCone"), color: u("uColor"), cam: u("uCam"),
+      light: u("uLight"), depth: u("uDepth"), tile: u("uTile"), planeScale: u("uPlaneScale"),
+      coneSteps: u("uConeSteps"), shadow: u("uShadow"), useColor: u("uUseColor"),
+      specular: u("uSpecular"), shading: u("uShading"), mode: u("uMode"),
     };
     this.smp = makeSampler(gl, gl.REPEAT, gl.LINEAR);
     this.coneSmp = makeSampler(gl, gl.REPEAT, gl.NEAREST);
+    this.colorTex = null;
+    this.hasColor = false;
+    this.planeScale = [1, 1];
     this.yaw = 0.6;
     this.pitch = 0.95;
     this.dist = 2.6;
     this._bindInput();
+  }
+
+  setColorSource(canvas, aspect = 1){
+    const gl = this.gl;
+    this.hasColor = !!canvas;
+    if(!canvas){
+      this.planeScale = [1, 1];
+      return;
+    }
+    aspect = Math.max(1e-4, aspect || 1);
+    this.planeScale = aspect >= 1 ? [1, 1 / aspect] : [aspect, 1];
+    if(!this.colorTex) this.colorTex = makeTex(gl, canvas.width, canvas.height);
+    gl.bindTexture(gl.TEXTURE_2D, this.colorTex);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
   }
 
   _bindInput(){
@@ -102,8 +122,12 @@ class Viewer {
       Math.cos(el) * Math.cos(az), Math.sin(el), Math.cos(el) * Math.sin(az));
     gl.uniform1f(this.u.depth, P.depth);
     gl.uniform1f(this.u.tile, P.tile);
+    gl.uniform2f(this.u.planeScale, this.planeScale[0], this.planeScale[1]);
     gl.uniform1i(this.u.coneSteps, P.coneSteps);
     gl.uniform1i(this.u.shadow, P.shadow ? 1 : 0);
+    gl.uniform1i(this.u.useColor, this.hasColor ? 1 : 0);
+    gl.uniform1i(this.u.specular, P.specular ? 1 : 0);
+    gl.uniform1i(this.u.shading, P.shading ? 1 : 0);
     gl.uniform1i(this.u.mode, P.mode);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, heightTex);
@@ -111,8 +135,12 @@ class Viewer {
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, coneTex);
     gl.bindSampler(1, this.coneSmp);
+    gl.activeTexture(gl.TEXTURE2);
+    gl.bindTexture(gl.TEXTURE_2D, this.colorTex || heightTex);
+    gl.bindSampler(2, this.smp);
     gl.uniform1i(this.u.height, 0);
     gl.uniform1i(this.u.cone, 1);
+    gl.uniform1i(this.u.color, 2);
     gl.drawArrays(gl.TRIANGLE_STRIP, 0, 4);
   }
 }

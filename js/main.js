@@ -17,7 +17,9 @@ try {
 }
 
 let srcImage = null;   // Image または canvas
+let colorImage = null; // 深度推定プレビュー用の元画像カラー
 let processed = null;  // { canvas, maxH, n }
+const depthEngine = window.DepthEngine ? new DepthEngine() : null;
 let autoLightT = 0, lastT = performance.now();
 
 // ---------- サンプル地形 (タイラブル) ----------
@@ -112,10 +114,28 @@ function processSource(){
   tc.drawImage(c, 0, 0, tcv.width, tcv.height);
 }
 
+function imageDataToCanvas(imageData, width, height){
+  const c = document.createElement("canvas");
+  c.width = width;
+  c.height = height;
+  c.getContext("2d").putImageData(imageData, 0, 0);
+  return c;
+}
+
+function makeSquareCanvas(source, n){
+  const c = document.createElement("canvas");
+  c.width = c.height = n;
+  c.getContext("2d").drawImage(source, 0, 0, n, n);
+  return c;
+}
+
 function startGenerate(){
   if(!srcImage) srcImage = makeSampleHeight(512);
   processSource();
   generator.setHeight(processed.canvas, processed.maxH, $("chkWrap").checked);
+  viewer.setColorSource(
+    colorImage ? makeSquareCanvas(colorImage, processed.n) : null,
+    colorImage ? colorImage.width / colorImage.height : 1);
   generator.start(+$("rngRadius").value, +$("rngSteps").value);
   genActive = true;
   $("btnGen").disabled = true;
@@ -179,11 +199,13 @@ function bindTooltips(){
     rngSteps: "コーンマップ生成時の検査レイを何分割してサンプルするかです。多いほどコーン比率の精度が上がりますが、生成時間が増えます。",
     btnGen: "現在の入力画像と設定で、Relaxed Cone Step Mapping 用のコーンマップを GPU で再生成します。",
     btnSave: "生成済みの PNG を保存します。R に高さ、G にコーン比率が入ります。",
-    selMode: "プレビューの表示内容を切り替えます。レリーフ表示、元の高さ、コーン比率、レイマーチ回数の確認に使います。",
+    selMode: "プレビューの表示内容を切り替えます。レリーフ表示、元の高さ、コーン比率、レイマーチ回数、シェーディング無し表示の確認に使います。",
+    btnDepth: "任意の写真や画像から AI で深度を推定し、その深度をハイトマップとしてコーンマップ生成まで進めます。このルートではプレビュー表面に元画像のカラーを使います。",
     rngDepth: "プレビュー上で高さをどれくらい深く見せるかです。大きいほど凹凸が強くなりますが、破綻も目立ちやすくなります。",
     rngTile: "プレビュー面に同じハイトマップを何回繰り返して貼るかです。タイル継ぎ目や繰り返しパターンの確認に使います。",
     rngConeSteps: "プレビュー描画時の Relaxed Cone Stepping の最大反復回数です。足りないと交点探索が途中で止まりやすく、多いほど重くなります。レイマーチ回数表示の色は 32 回で最大色に飽和します。",
     chkShadow: "プレビューに簡易セルフシャドウを追加します。形状の見え方は確認しやすくなりますが、描画負荷は少し増えます。",
+    chkSpecular: "ライトによる光沢ハイライトを表示します。元画像カラーの確認を優先したい場合は OFF にします。",
     chkAutoLight: "ライトの方位角を自動で回転させます。凹凸や影の出方を連続的に確認したい時に使います。",
     rngLightAz: "ライトの水平角度です。影やハイライトが左右どちらから入るかを調整します。",
     rngLightEl: "ライトの仰角です。低いほど影が長く、高いほど正面から照らした見た目になります。"
@@ -217,9 +239,40 @@ function loadFile(file){
   if(!file || !file.type.startsWith("image/")) return;
   const url = URL.createObjectURL(file);
   const img = new Image();
-  img.onload = () => { srcImage = img; URL.revokeObjectURL(url); startGenerate(); };
+  img.onload = () => { srcImage = img; colorImage = null; URL.revokeObjectURL(url); startGenerate(); };
   img.onerror = () => { URL.revokeObjectURL(url); $("status").textContent = "画像を読み込めませんでした"; };
   img.src = url;
+}
+
+async function loadDepthFile(file){
+  if(!file || !file.type.startsWith("image/")) return;
+  if(!depthEngine){
+    $("status").textContent = "深度推定エンジンを初期化できませんでした";
+    return;
+  }
+  if(generator.busy) generator.abort();
+  const reader = new FileReader();
+  reader.onerror = () => $("status").textContent = "画像を読み込めませんでした";
+  reader.onload = async e => {
+    try {
+      $("btnDepth").disabled = true;
+      $("btnGen").disabled = true;
+      $("btnSave").disabled = true;
+      $("status").textContent = "深度推定モデルを読み込み中...";
+      await depthEngine.initModel();
+      $("status").textContent = "画像から深度を推定中...";
+      const result = await depthEngine.estimate(e.target.result);
+      srcImage = imageDataToCanvas(result.depth.imageData, result.depth.width, result.depth.height);
+      colorImage = imageDataToCanvas(result.original.imageData, result.original.width, result.original.height);
+      startGenerate();
+    } catch(err) {
+      $("status").textContent = "深度推定に失敗しました: " + (err.message || String(err));
+      $("btnGen").disabled = false;
+    } finally {
+      $("btnDepth").disabled = false;
+    }
+  };
+  reader.readAsDataURL(file);
 }
 
 const dz = $("dropZone");
@@ -232,7 +285,9 @@ dz.addEventListener("drop", e => {
   loadFile(e.dataTransfer.files[0]);
 });
 $("fileInput").addEventListener("change", e => loadFile(e.target.files[0]));
-$("btnSample").addEventListener("click", () => { srcImage = makeSampleHeight(512); startGenerate(); });
+$("depthFileInput").addEventListener("change", e => loadDepthFile(e.target.files[0]));
+$("btnDepth").addEventListener("click", () => $("depthFileInput").click());
+$("btnSample").addEventListener("click", () => { srcImage = makeSampleHeight(512); colorImage = null; startGenerate(); });
 $("btnGen").addEventListener("click", startGenerate);
 $("btnAbort").addEventListener("click", () => generator.abort());
 $("btnSave").addEventListener("click", savePNG);
@@ -264,12 +319,15 @@ function frame(){
   }
 
   if($("chkAutoLight").checked) autoLightT += dt * 20;
+  const viewMode = +$("selMode").value;
   viewer.render(generator.heightTex, generator.coneTex, {
     depth: +$("rngDepth").value,
     tile: +$("rngTile").value,
     coneSteps: +$("rngConeSteps").value,
     shadow: $("chkShadow").checked,
-    mode: +$("selMode").value,
+    shading: viewMode !== 4,
+    specular: $("chkSpecular").checked,
+    mode: viewMode,
     lightAz: (+$("rngLightAz").value + autoLightT) % 360,
     lightEl: +$("rngLightEl").value,
   });

@@ -81,11 +81,12 @@ void main(){
 viewVS: `#version 300 es
 const vec2 q[4] = vec2[4](vec2(-1.0,-1.0), vec2(1.0,-1.0), vec2(-1.0,1.0), vec2(1.0,1.0));
 uniform mat4 uVP;
+uniform vec2 uPlaneScale;
 out vec3 vWorld;
 out vec2 vUV;
 void main(){
   vec2 p = q[gl_VertexID];
-  vWorld = vec3(p.x, 0.0, p.y);
+  vWorld = vec3(p.x * uPlaneScale.x, 0.0, p.y * uPlaneScale.y);
   vUV = vec2(p.x, -p.y) * 0.5 + 0.5;
   gl_Position = uVP * vec4(vWorld, 1.0);
 }
@@ -96,12 +97,17 @@ viewFS: `#version 300 es
 precision highp float;
 uniform sampler2D uHeight;  // R = 高さ
 uniform sampler2D uCone;    // R = コーン比率
+uniform sampler2D uColor;   // RGB = 元画像カラー
 uniform vec3  uCam;
 uniform vec3  uLight;       // 表面→ライト方向 (ワールド, 正規化済み)
 uniform float uDepth;       // 深さスケール (ワールド単位)
 uniform float uTile;
+uniform vec2  uPlaneScale;
 uniform int   uConeSteps;
 uniform bool  uShadow;
+uniform bool  uUseColor;
+uniform bool  uSpecular;
+uniform bool  uShading;
 uniform int   uMode;        // 0:レリーフ 1:高さ 2:コーン
 in vec3 vWorld;
 in vec2 vUV;
@@ -127,7 +133,10 @@ void main(){
   float ds = max(uDepth, 1e-4);
   // テクスチャ空間 (u, v, depth) でのレイ方向
   // u = (x+1)/2*tile, v = (1-z)/2*tile なので v 成分は z の符号反転
-  vec3 dir = vec3(wdir.x * 0.5 * uTile, -wdir.z * 0.5 * uTile, -wdir.y / ds);
+  vec3 dir = vec3(
+    wdir.x * 0.5 * uTile / uPlaneScale.x,
+    -wdir.z * 0.5 * uTile / uPlaneScale.y,
+    -wdir.y / ds);
   if(dir.z < 1e-5){ outColor = vec4(0.0); return; }
   dir /= dir.z;                       // dir.z = 1 (深さ単位で前進)
   float rr = length(dir.xy);
@@ -166,16 +175,19 @@ void main(){
   vec2 e = 1.0 / vec2(textureSize(uHeight, 0));
   float hx = hAt(p.xy + vec2(e.x, 0.0)) - hAt(p.xy - vec2(e.x, 0.0));
   float hz = hAt(p.xy + vec2(0.0, e.y)) - hAt(p.xy - vec2(0.0, e.y));
-  float kx = (hx * ds) / (2.0 * e.x * (2.0 / uTile));
-  float kz = (hz * ds) / (2.0 * e.y * (2.0 / uTile));
+  float kx = (hx * ds) / (2.0 * e.x * (2.0 * uPlaneScale.x / uTile));
+  float kz = (hz * ds) / (2.0 * e.y * (2.0 * uPlaneScale.y / uTile));
   vec3 N = normalize(vec3(-kx, 1.0, kz));   // dv/dz < 0 なので z 成分は符号反転
 
   // --- ライティング ---
   vec3 L = normalize(uLight);
   float diff = max(dot(N, L), 0.0);
   float lit = 1.0;
-  if(uShadow && diff > 0.0 && L.y > 0.05){
-    vec3 ld = vec3(L.x * 0.5 * uTile, -L.z * 0.5 * uTile, -L.y / ds);
+  if(uShadow && (uShading ? diff > 0.0 : true) && L.y > 0.05){
+    vec3 ld = vec3(
+      L.x * 0.5 * uTile / uPlaneScale.x,
+      -L.z * 0.5 * uTile / uPlaneScale.y,
+      -L.y / ds);
     ld /= -ld.z;                      // ld.z = -1 (上方向へ)
     float t0 = p.z;
     for(int i = 1; i <= 24; i++){
@@ -185,12 +197,16 @@ void main(){
     }
   }
   float h = hAt(p.xy);
-  vec3 albedo = mix(vec3(0.30, 0.27, 0.25), vec3(0.85, 0.82, 0.78), h);
+  vec3 albedo = uUseColor
+    ? pow(texture(uColor, p.xy).rgb, vec3(2.2))
+    : mix(vec3(0.30, 0.27, 0.25), vec3(0.85, 0.82, 0.78), h);
   float ao = mix(0.45, 1.0, h);
   vec3 V = -wdir;
   vec3 H = normalize(L + V);
-  float spec = pow(max(dot(N, H), 0.0), 48.0) * 0.35;
-  vec3 col = albedo * (0.20 * ao + 0.95 * diff * lit) + vec3(spec) * lit * step(0.001, diff);
+  float spec = uSpecular ? pow(max(dot(N, H), 0.0), 48.0) * 0.35 : 0.0;
+  vec3 col = uShading
+    ? albedo * (0.20 * ao + 0.95 * diff * lit) + vec3(spec) * lit * step(0.001, diff)
+    : albedo * lit;
   col = pow(col, vec3(1.0 / 2.2));
   outColor = vec4(col, 1.0);
 }

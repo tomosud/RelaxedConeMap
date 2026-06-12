@@ -17,8 +17,10 @@
       <h2>入力ハイトマップ</h2>
       <div id="dropZone">画像をドロップ<br>またはクリックして選択</div>
       <input type="file" id="fileInput" accept="image/*" hidden>
+      <input type="file" id="depthFileInput" accept="image/*" hidden>
       <div class="row">
         <button id="btnSample">サンプル地形を生成</button>
+        <button id="btnDepth">画像から深度推定</button>
       </div>
       <canvas id="thumb" width="220" height="220"></canvas>
       <div class="row">
@@ -67,6 +69,7 @@
           <option value="1">ハイトマップ</option>
           <option value="2">コーンマップ</option>
           <option value="3">レイマーチ回数</option>
+          <option value="4">シェーディング無し</option>
         </select>
       </label>
       <div class="heatLegend" aria-label="レイマーチ回数ヒートマップ凡例">
@@ -74,7 +77,7 @@
         <div class="heatTicks" id="heatTicks"></div>
       </div>
       <label class="slider">深さスケール <span id="lblDepth">0.15</span>
-        <input type="range" id="rngDepth" min="0.01" max="0.5" step="0.005" value="0.15">
+        <input type="range" id="rngDepth" min="0.01" max="5" step="0.005" value="0.15">
       </label>
       <label class="slider">タイル数 <span id="lblTile">1</span>
         <input type="range" id="rngTile" min="1" max="4" step="1" value="1">
@@ -84,6 +87,7 @@
       </label>
       <div class="row">
         <label><input type="checkbox" id="chkShadow" checked> セルフシャドウ</label>
+        <label><input type="checkbox" id="chkSpecular" checked> スペキュラー</label>
         <label><input type="checkbox" id="chkAutoLight" checked> ライト自動回転</label>
       </div>
       <label class="slider">ライト方位 <span id="lblLightAz">45</span>°
@@ -105,6 +109,8 @@
 <script src="js/gl.js"></script>
 <script src="js/generator.js"></script>
 <script src="js/viewer.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
+<script src="js/depth.js"></script>
 <script src="js/main.js"></script>
 </body>
 </html>
