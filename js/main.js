@@ -160,6 +160,49 @@ function bindLabel(rngId, lblId){
   const f = () => l.textContent = r.value;
   r.addEventListener("input", f); f();
 }
+
+function updateHeatTicks(){
+  $("heatTicks").innerHTML = [0, 8, 16, 24, 32]
+    .map(v => `<span>${v}</span>`)
+    .join("");
+}
+
+function bindTooltips(){
+  const tips = {
+    dropZone: "入力するハイトマップ画像を読み込みます。白に近いほど高く、黒に近いほど低い地形として扱います。",
+    btnSample: "動作確認用のサンプルハイトマップを生成し、そのままコーンマップ生成を開始します。",
+    selSize: "生成するコーンマップ PNG の一辺の解像度です。大きいほど細かくなりますが、生成時間とメモリ使用量が増えます。",
+    selChannel: "入力画像のどのチャンネルを高さとして使うかを選びます。通常は輝度で、専用画像なら R/G/B/A を指定します。",
+    chkInvert: "高さを反転します。黒が高く白が低い画像を使う場合に ON にします。",
+    chkWrap: "画像端をまたいで繰り返し接続します。タイル素材として使う場合は ON、単発画像なら OFF が向いています。",
+    rngRadius: "コーンマップ生成時に、各ピクセルから周囲を何ピクセル先まで調べるかです。大きいほど遠くの遮蔽まで考慮しますが、生成が重くなります。",
+    rngSteps: "コーンマップ生成時の検査レイを何分割してサンプルするかです。多いほどコーン比率の精度が上がりますが、生成時間が増えます。",
+    btnGen: "現在の入力画像と設定で、Relaxed Cone Step Mapping 用のコーンマップを GPU で再生成します。",
+    btnSave: "生成済みの PNG を保存します。R に高さ、G にコーン比率が入ります。",
+    selMode: "プレビューの表示内容を切り替えます。レリーフ表示、元の高さ、コーン比率、レイマーチ回数の確認に使います。",
+    rngDepth: "プレビュー上で高さをどれくらい深く見せるかです。大きいほど凹凸が強くなりますが、破綻も目立ちやすくなります。",
+    rngTile: "プレビュー面に同じハイトマップを何回繰り返して貼るかです。タイル継ぎ目や繰り返しパターンの確認に使います。",
+    rngConeSteps: "プレビュー描画時の Relaxed Cone Stepping の最大反復回数です。足りないと交点探索が途中で止まりやすく、多いほど重くなります。レイマーチ回数表示の色は 32 回で最大色に飽和します。",
+    chkShadow: "プレビューに簡易セルフシャドウを追加します。形状の見え方は確認しやすくなりますが、描画負荷は少し増えます。",
+    chkAutoLight: "ライトの方位角を自動で回転させます。凹凸や影の出方を連続的に確認したい時に使います。",
+    rngLightAz: "ライトの水平角度です。影やハイライトが左右どちらから入るかを調整します。",
+    rngLightEl: "ライトの仰角です。低いほど影が長く、高いほど正面から照らした見た目になります。"
+  };
+  for(const [id, text] of Object.entries(tips)){
+    const el = $(id);
+    if(!el) continue;
+    const target = el.closest("label") || el;
+    target.classList.add("hasTip");
+    target.dataset.tip = text;
+  }
+  const heatLegend = document.querySelector(".heatLegend");
+  if(heatLegend){
+    const text = "レイマーチ回数ヒートマップの凡例です。色は絶対回数で、0 回から 32 回までを表示し、32 回以上は最大色として扱います。";
+    heatLegend.classList.add("hasTip");
+    heatLegend.dataset.tip = text;
+  }
+}
+
 bindLabel("rngRadius", "lblRadius");
 bindLabel("rngSteps", "lblSteps");
 bindLabel("rngDepth", "lblDepth");
@@ -167,6 +210,8 @@ bindLabel("rngTile", "lblTile");
 bindLabel("rngConeSteps", "lblConeSteps");
 bindLabel("rngLightAz", "lblLightAz");
 bindLabel("rngLightEl", "lblLightEl");
+updateHeatTicks();
+bindTooltips();
 
 function loadFile(file){
   if(!file || !file.type.startsWith("image/")) return;

@@ -66,8 +66,13 @@
           <option value="0" selected>レリーフ (cone step)</option>
           <option value="1">ハイトマップ</option>
           <option value="2">コーンマップ</option>
+          <option value="3">レイマーチ回数</option>
         </select>
       </label>
+      <div class="heatLegend" aria-label="レイマーチ回数ヒートマップ凡例">
+        <div class="heatRamp"></div>
+        <div class="heatTicks" id="heatTicks"></div>
+      </div>
       <label class="slider">深さスケール <span id="lblDepth">0.15</span>
         <input type="range" id="rngDepth" min="0.01" max="0.5" step="0.005" value="0.15">
       </label>
@@ -75,7 +80,7 @@
         <input type="range" id="rngTile" min="1" max="4" step="1" value="1">
       </label>
       <label class="slider">コーンステップ数 <span id="lblConeSteps">24</span>
-        <input type="range" id="rngConeSteps" min="4" max="48" step="1" value="24">
+        <input type="range" id="rngConeSteps" min="4" max="64" step="1" value="24">
       </label>
       <div class="row">
         <label><input type="checkbox" id="chkShadow" checked> セルフシャドウ</label>

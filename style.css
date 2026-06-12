@@ -25,6 +25,12 @@ button.primary:hover:not(:disabled){background:#356ac4}
 progress{width:100%;height:8px;margin-top:8px}
 #status{font-size:12px;color:#9aa3b2;margin:6px 0}
 .hint{font-size:11px;color:#717a89;margin-top:6px}
+.hasTip{position:relative}
+.hasTip::after{content:attr(data-tip);position:absolute;left:0;top:calc(100% + 6px);z-index:20;width:min(280px,calc(100vw - 32px));padding:8px 10px;border:1px solid #465066;border-radius:6px;background:#101318;color:#d8dce2;box-shadow:0 8px 22px rgba(0,0,0,.35);font-size:12px;line-height:1.45;white-space:normal;pointer-events:none;opacity:0;transform:translateY(-3px);transition:opacity .12s ease,transform .12s ease}
+.hasTip:hover::after,.hasTip:focus-within::after{opacity:1;transform:translateY(0)}
+.heatLegend{margin:7px 0 9px;color:#717a89;font-size:11px}
+.heatRamp{height:8px;border-radius:3px;background:linear-gradient(90deg,#050d3d 0%,#009ec7 33%,#f5e01f 66%,#f20d05 100%)}
+.heatTicks{display:flex;justify-content:space-between;margin-top:3px}
 #btnSave{width:100%;margin-top:4px}
 #glError{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#e08a8a;font-size:14px}
 #glError[hidden]{display:none}

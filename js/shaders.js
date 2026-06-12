@@ -111,6 +111,13 @@ float hAt(vec2 uv){ return texture(uHeight, uv).r; }
 float dAt(vec2 uv){ return 1.0 - texture(uHeight, uv).r; }
 float cAt(vec2 uv){ return max(texture(uCone, uv).r, 0.002); }
 
+vec3 heatColor(float t){
+  t = clamp(t, 0.0, 1.0);
+  if(t < 0.33) return mix(vec3(0.02, 0.05, 0.24), vec3(0.00, 0.62, 0.78), t / 0.33);
+  if(t < 0.66) return mix(vec3(0.00, 0.62, 0.78), vec3(0.96, 0.88, 0.12), (t - 0.33) / 0.33);
+  return mix(vec3(0.96, 0.88, 0.12), vec3(0.95, 0.05, 0.02), (t - 0.66) / 0.34);
+}
+
 void main(){
   vec2 uv0 = vUV * uTile;
   if(uMode == 1){ outColor = vec4(vec3(hAt(uv0)), 1.0); return; }
@@ -127,14 +134,24 @@ void main(){
 
   // --- relaxed cone stepping ---
   vec3 p = vec3(uv0, 0.0);
-  for(int i = 0; i < 48; i++){
+  int marchCount = 0;
+  for(int i = 0; i < 64; i++){
     if(i >= uConeSteps) break;
     float d = dAt(p.xy);
+    float h = d - p.z;
+    if(h <= 0.001) break;
     float c = cAt(p.xy);
-    float h = max(d - p.z, 0.0);
     p += dir * (c * h / (rr + c));
+    marchCount = i + 1;
+    if(p.z >= 1.0) break;
   }
   if(p.z > 1.0) p += dir * (1.0 - p.z);
+
+  if(uMode == 3){
+    float t = float(marchCount) / 32.0;
+    outColor = vec4(heatColor(t), 1.0);
+    return;
+  }
 
   // --- 二分探索による交点精密化 (relaxed cone は区間内の交差が高々1回) ---
   float lo = 0.0, hi = p.z;
