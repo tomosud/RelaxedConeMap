@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Relaxed Cone Map Generator</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<header>
+  <h1>Relaxed Cone Map Generator</h1>
+  <span class="sub">ハイトマップ → Relaxed Cone Step Mapping 用コーンマップ生成 &amp; プレビュー (WebGL2 / GPU)</span>
+</header>
+<main>
+  <aside id="panel">
+    <section>
+      <h2>入力ハイトマップ</h2>
+      <div id="dropZone">画像をドロップ<br>またはクリックして選択</div>
+      <input type="file" id="fileInput" accept="image/*" hidden>
+      <div class="row">
+        <button id="btnSample">サンプル地形を生成</button>
+      </div>
+      <canvas id="thumb" width="220" height="220"></canvas>
+      <div class="row">
+        <label>解像度
+          <select id="selSize">
+            <option>128</option><option selected>256</option><option>512</option><option>1024</option>
+          </select>
+        </label>
+        <label>チャンネル
+          <select id="selChannel">
+            <option value="luma" selected>輝度</option>
+            <option value="r">R</option><option value="g">G</option>
+            <option value="b">B</option><option value="a">A</option>
+          </select>
+        </label>
+      </div>
+      <div class="row">
+        <label><input type="checkbox" id="chkInvert"> 高さを反転</label>
+        <label><input type="checkbox" id="chkWrap" checked> タイリング(ラップ)</label>
+      </div>
+    </section>
+
+    <section>
+      <h2>コーンマップ生成</h2>
+      <label class="slider">探索半径 <span id="lblRadius">48</span> px
+        <input type="range" id="rngRadius" min="8" max="192" value="48">
+      </label>
+      <label class="slider">レイ探索ステップ <span id="lblSteps">24</span>
+        <input type="range" id="rngSteps" min="8" max="64" value="24">
+      </label>
+      <div class="row">
+        <button id="btnGen" class="primary">生成 (GPU)</button>
+        <button id="btnAbort" hidden>中止</button>
+      </div>
+      <progress id="prog" max="1" value="0"></progress>
+      <div id="status">待機中</div>
+      <button id="btnSave" disabled>コーンマップ PNG を保存</button>
+      <div class="hint">出力PNG: R = 高さ / G = コーン比率</div>
+    </section>
+
+    <section>
+      <h2>プレビュー</h2>
+      <label>表示
+        <select id="selMode">
+          <option value="0" selected>レリーフ (cone step)</option>
+          <option value="1">ハイトマップ</option>
+          <option value="2">コーンマップ</option>
+        </select>
+      </label>
+      <label class="slider">深さスケール <span id="lblDepth">0.15</span>
+        <input type="range" id="rngDepth" min="0.01" max="0.5" step="0.005" value="0.15">
+      </label>
+      <label class="slider">タイル数 <span id="lblTile">1</span>
+        <input type="range" id="rngTile" min="1" max="4" step="1" value="1">
+      </label>
+      <label class="slider">コーンステップ数 <span id="lblConeSteps">24</span>
+        <input type="range" id="rngConeSteps" min="4" max="48" step="1" value="24">
+      </label>
+      <div class="row">
+        <label><input type="checkbox" id="chkShadow" checked> セルフシャドウ</label>
+        <label><input type="checkbox" id="chkAutoLight" checked> ライト自動回転</label>
+      </div>
+      <label class="slider">ライト方位 <span id="lblLightAz">45</span>°
+        <input type="range" id="rngLightAz" min="0" max="360" value="45">
+      </label>
+      <label class="slider">ライト仰角 <span id="lblLightEl">45</span>°
+        <input type="range" id="rngLightEl" min="10" max="80" value="45">
+      </label>
+      <div class="hint">ドラッグ: 回転 / ホイール: ズーム</div>
+    </section>
+  </aside>
+
+  <section id="view">
+    <canvas id="glcanvas"></canvas>
+    <div id="glError" hidden>WebGL2 が利用できません。<br>最新の Chrome / Edge / Firefox をご利用ください。</div>
+  </section>
+</main>
+<script src="js/shaders.js"></script>
+<script src="js/gl.js"></script>
+<script src="js/generator.js"></script>
+<script src="js/viewer.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
