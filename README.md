@@ -1,5 +1,7 @@
 # Relaxed Cone Map Generator
 
+https://tomosud.github.io/RelaxedConeMap/
+
 ハイトマップ画像から **Relaxed Cone Step Mapping** 用のコーンマップを生成し、その場で 3D プレビューできる Web ツールです。
 生成・プレビューとも **WebGL2 (GPU)** で動作し、サーバー処理は一切不要。GitHub Pages にそのまま置けます。
 
