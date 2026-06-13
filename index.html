@@ -17,7 +17,12 @@
       <h2>入力ハイトマップ</h2>
       <div id="dropZone">画像をドロップ<br>またはクリックして選択</div>
       <input type="file" id="fileInput" accept="image/*" hidden>
+      <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="depthFileInput" accept="image/*" hidden>
+      <div class="row mobileActions">
+        <button id="btnCamera" class="primary">撮影して深度生成</button>
+        <button id="btnPhoto">写真から深度生成</button>
+      </div>
       <div class="row">
         <button id="btnSample">サンプル地形を生成</button>
         <button id="btnDepth">画像から深度推定</button>
@@ -90,6 +95,7 @@
         <label><input type="checkbox" id="chkSpecular" checked> スペキュラー</label>
         <label><input type="checkbox" id="chkAutoLight" checked> ライト自動回転</label>
       </div>
+      <button id="btnTilt" class="sensorButton">傾き操作を有効化</button>
       <label class="slider">ライト方位 <span id="lblLightAz">45</span>°
         <input type="range" id="rngLightAz" min="0" max="360" value="45">
       </label>

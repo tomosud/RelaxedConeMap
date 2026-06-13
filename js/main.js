@@ -190,6 +190,8 @@ function updateHeatTicks(){
 function bindTooltips(){
   const tips = {
     dropZone: "入力するハイトマップ画像を読み込みます。白に近いほど高く、黒に近いほど低い地形として扱います。",
+    btnCamera: "iPhone やスマホのカメラで撮影し、その写真から深度とコーンマップを続けて生成します。",
+    btnPhoto: "端末内の写真を選び、その写真から深度とコーンマップを続けて生成します。",
     btnSample: "動作確認用のサンプルハイトマップを生成し、そのままコーンマップ生成を開始します。",
     selSize: "生成するコーンマップ PNG の一辺の解像度です。大きいほど細かくなりますが、生成時間とメモリ使用量が増えます。",
     selChannel: "入力画像のどのチャンネルを高さとして使うかを選びます。通常は輝度で、専用画像なら R/G/B/A を指定します。",
@@ -207,6 +209,7 @@ function bindTooltips(){
     chkShadow: "プレビューに簡易セルフシャドウを追加します。形状の見え方は確認しやすくなりますが、描画負荷は少し増えます。",
     chkSpecular: "ライトによる光沢ハイライトを表示します。元画像カラーの確認を優先したい場合は OFF にします。",
     chkAutoLight: "ライトの方位角を自動で回転させます。凹凸や影の出方を連続的に確認したい時に使います。",
+    btnTilt: "スマホの傾きセンサーでプレビューの視点を動かします。iOS Safari ではタップ後に許可が必要です。",
     rngLightAz: "ライトの水平角度です。影やハイライトが左右どちらから入るかを調整します。",
     rngLightEl: "ライトの仰角です。低いほど影が長く、高いほど正面から照らした見た目になります。"
   };
@@ -255,6 +258,8 @@ async function loadDepthFile(file){
   reader.onerror = () => $("status").textContent = "画像を読み込めませんでした";
   reader.onload = async e => {
     try {
+      $("btnCamera").disabled = true;
+      $("btnPhoto").disabled = true;
       $("btnDepth").disabled = true;
       $("btnGen").disabled = true;
       $("btnSave").disabled = true;
@@ -269,6 +274,8 @@ async function loadDepthFile(file){
       $("status").textContent = "深度推定に失敗しました: " + (err.message || String(err));
       $("btnGen").disabled = false;
     } finally {
+      $("btnCamera").disabled = false;
+      $("btnPhoto").disabled = false;
       $("btnDepth").disabled = false;
     }
   };
@@ -285,12 +292,29 @@ dz.addEventListener("drop", e => {
   loadFile(e.dataTransfer.files[0]);
 });
 $("fileInput").addEventListener("change", e => loadFile(e.target.files[0]));
+$("cameraInput").addEventListener("change", e => loadDepthFile(e.target.files[0]));
 $("depthFileInput").addEventListener("change", e => loadDepthFile(e.target.files[0]));
+$("btnCamera").addEventListener("click", () => $("cameraInput").click());
+$("btnPhoto").addEventListener("click", () => $("depthFileInput").click());
 $("btnDepth").addEventListener("click", () => $("depthFileInput").click());
 $("btnSample").addEventListener("click", () => { srcImage = makeSampleHeight(512); colorImage = null; startGenerate(); });
 $("btnGen").addEventListener("click", startGenerate);
 $("btnAbort").addEventListener("click", () => generator.abort());
 $("btnSave").addEventListener("click", savePNG);
+$("btnTilt").addEventListener("click", async () => {
+  try {
+    if(viewer.tiltEnabled){
+      viewer.resetTiltCenter();
+      $("status").textContent = "現在の向きを基準にしました";
+      return;
+    }
+    await viewer.enableTilt();
+    $("btnTilt").textContent = "傾き操作を再センター";
+    $("status").textContent = "傾き操作を有効化しました";
+  } catch(err) {
+    $("status").textContent = err.message || String(err);
+  }
+});
 for(const id of ["selSize", "selChannel", "chkInvert"]){
   $(id).addEventListener("change", () => {
     if(srcImage && !generator.busy){

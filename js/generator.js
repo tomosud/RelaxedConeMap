@@ -10,8 +10,9 @@ class ConeMapGenerator {
     this.gl = gl;
     this.BATCH = 128;
     this.floatColorExt = gl.getExtension("EXT_color_buffer_float");
-    if(!this.floatColorExt)
-      throw new Error("EXT_color_buffer_float is required for R16F cone buffers.");
+    this.useFloatCone = !!this.floatColorExt;
+    if(!this.useFloatCone)
+      console.warn("EXT_color_buffer_float is unavailable. Falling back to R8 cone buffers.");
     this.prog = glProgram(gl, SHADERS.fsqVS, SHADERS.genFS);
     this.compProg = glProgram(gl, SHADERS.fsqVS, SHADERS.compFS);
     const u = n => gl.getUniformLocation(this.prog, n);
@@ -27,7 +28,11 @@ class ConeMapGenerator {
     this.smpRepeat = makeSampler(gl, gl.REPEAT, gl.LINEAR);
     this.smpClamp = makeSampler(gl, gl.CLAMP_TO_EDGE, gl.LINEAR);
     this.size = 0;
-    this.coneTexOpts = { internalFormat: gl.R16F, format: gl.RED, type: gl.HALF_FLOAT };
+    this.coneTexOpts = this.useFloatCone
+      ? { internalFormat: gl.R16F, format: gl.RED, type: gl.HALF_FLOAT }
+      : { internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE };
+    this.syncType = this.useFloatCone ? gl.FLOAT : gl.UNSIGNED_BYTE;
+    this._syncBuf = this.useFloatCone ? new Float32Array(1) : new Uint8Array(1);
     this.heightTex = null;
     this.ping = [null, null];
     this.fbo = [null, null];
@@ -142,7 +147,7 @@ class ConeMapGenerator {
   _syncGPU(){
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo[this.cur]);
-    gl.readPixels(0, 0, 1, 1, gl.RED, gl.FLOAT, this._syncBuf || (this._syncBuf = new Float32Array(1)));
+    gl.readPixels(0, 0, 1, 1, gl.RED, this.syncType, this._syncBuf);
   }
 
   // budgetMs を目安にパスを進める (フレーム毎に呼ぶ)

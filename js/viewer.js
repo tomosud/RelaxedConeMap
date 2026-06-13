@@ -52,7 +52,12 @@ class Viewer {
     this.planeScale = [1, 1];
     this.yaw = 0.6;
     this.pitch = 0.95;
+    this.targetYaw = this.yaw;
+    this.targetPitch = this.pitch;
     this.dist = 2.6;
+    this.tiltEnabled = false;
+    this.tiltBase = null;
+    this._orientationHandler = e => this._onDeviceOrientation(e);
     this._bindInput();
   }
 
@@ -77,6 +82,9 @@ class Viewer {
     let drag = false, lx = 0, ly = 0;
     cv.addEventListener("pointerdown", e => {
       drag = true; lx = e.clientX; ly = e.clientY;
+      this.targetYaw = this.yaw;
+      this.targetPitch = this.pitch;
+      this.tiltBase = null;
       cv.setPointerCapture(e.pointerId);
     });
     cv.addEventListener("pointermove", e => {
@@ -84,6 +92,8 @@ class Viewer {
       this.yaw -= (e.clientX - lx) * 0.008;
       this.pitch += (e.clientY - ly) * 0.008;
       this.pitch = Math.min(1.45, Math.max(0.15, this.pitch));
+      this.targetYaw = this.yaw;
+      this.targetPitch = this.pitch;
       lx = e.clientX; ly = e.clientY;
     });
     cv.addEventListener("pointerup", () => drag = false);
@@ -94,8 +104,51 @@ class Viewer {
     }, { passive: false });
   }
 
+  async enableTilt(){
+    if(!("DeviceOrientationEvent" in window)){
+      throw new Error("この端末では傾きセンサーを利用できません。");
+    }
+    if(typeof DeviceOrientationEvent.requestPermission === "function"){
+      const permission = await DeviceOrientationEvent.requestPermission();
+      if(permission !== "granted") throw new Error("傾きセンサーの利用が許可されませんでした。");
+    }
+    window.removeEventListener("deviceorientation", this._orientationHandler);
+    window.addEventListener("deviceorientation", this._orientationHandler, true);
+    this.tiltEnabled = true;
+    this.tiltBase = null;
+    this.targetYaw = this.yaw;
+    this.targetPitch = this.pitch;
+  }
+
+  resetTiltCenter(){
+    this.tiltBase = null;
+    this.targetYaw = this.yaw;
+    this.targetPitch = this.pitch;
+  }
+
+  _onDeviceOrientation(e){
+    if(!this.tiltEnabled || e.beta == null || e.gamma == null) return;
+    if(!this.tiltBase){
+      this.tiltBase = {
+        beta: e.beta,
+        gamma: e.gamma,
+        yaw: this.yaw,
+        pitch: this.pitch,
+      };
+    }
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    const dx = clamp(e.gamma - this.tiltBase.gamma, -35, 35);
+    const dy = clamp(e.beta - this.tiltBase.beta, -35, 35);
+    this.targetYaw = this.tiltBase.yaw - dx * 0.018;
+    this.targetPitch = clamp(this.tiltBase.pitch + dy * 0.014, 0.15, 1.45);
+  }
+
   render(heightTex, coneTex, P){
     const gl = this.gl, cv = this.canvas;
+    if(this.tiltEnabled){
+      this.yaw += (this.targetYaw - this.yaw) * 0.18;
+      this.pitch += (this.targetPitch - this.pitch) * 0.18;
+    }
     const dpr = Math.min(2, window.devicePixelRatio || 1);
     const w = Math.max(1, Math.floor(cv.clientWidth * dpr));
     const h = Math.max(1, Math.floor(cv.clientHeight * dpr));
