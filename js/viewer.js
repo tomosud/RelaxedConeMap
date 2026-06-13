@@ -10,6 +10,15 @@ function m4Persp(fovy, aspect, near, far){
     0, 0, 2 * far * near * nf, 0]);
 }
 
+function m4Frustum(l, r, b, t, n, f){
+  const rl = r - l, tb = t - b, fn = f - n;
+  return new Float32Array([
+    2 * n / rl, 0, 0, 0,
+    0, 2 * n / tb, 0, 0,
+    (r + l) / rl, (t + b) / tb, -(f + n) / fn, -1,
+    0, 0, -2 * f * n / fn, 0]);
+}
+
 function m4LookAt(ex, ey, ez, cx, cy, cz, ux, uy, uz){
   let zx = ex - cx, zy = ey - cy, zz = ez - cz;
   const zl = Math.hypot(zx, zy, zz); zx /= zl; zy /= zl; zz /= zl;
@@ -55,6 +64,11 @@ class Viewer {
     this.targetYaw = this.yaw;
     this.targetPitch = this.pitch;
     this.dist = 2.6;
+    this.faceOn = false;
+    this.faceTiltX = 0;
+    this.faceTiltY = 0;
+    this.targetTiltX = 0;
+    this.targetTiltY = 0;
     this.tiltEnabled = false;
     this.tiltBase = null;
     this._orientationHandler = e => this._onDeviceOrientation(e);
@@ -126,8 +140,25 @@ class Viewer {
     this.targetPitch = this.pitch;
   }
 
+  setFaceOn(on){
+    this.faceOn = !!on;
+    this.tiltBase = null;
+    this.targetTiltX = 0;
+    this.targetTiltY = 0;
+  }
+
   _onDeviceOrientation(e){
     if(!this.tiltEnabled || e.beta == null || e.gamma == null) return;
+    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
+    if(this.faceOn){
+      // 正対モード: 傾きでカメラを横にオフセットしてレリーフを覗き込む
+      if(!this.tiltBase) this.tiltBase = { beta: e.beta, gamma: e.gamma };
+      const dB = clamp(e.beta - this.tiltBase.beta, -45, 45) / 45;
+      const dG = clamp(e.gamma - this.tiltBase.gamma, -45, 45) / 45;
+      this.targetTiltX = dG;
+      this.targetTiltY = dB;
+      return;
+    }
     if(!this.tiltBase){
       this.tiltBase = {
         beta: e.beta,
@@ -136,7 +167,6 @@ class Viewer {
         pitch: this.pitch,
       };
     }
-    const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
     const dx = clamp(e.gamma - this.tiltBase.gamma, -35, 35);
     const dy = clamp(e.beta - this.tiltBase.beta, -35, 35);
     this.targetYaw = this.tiltBase.yaw - dx * 0.018;
@@ -159,13 +189,34 @@ class Viewer {
     gl.clear(gl.COLOR_BUFFER_BIT);
     if(!heightTex || !coneTex) return;
 
-    const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
-    const ex = this.dist * cp * Math.sin(this.yaw);
-    const ey = this.dist * sp;
-    const ez = this.dist * cp * Math.cos(this.yaw);
-    const vp = m4Mul(
-      m4Persp(45 * Math.PI / 180, w / h, 0.05, 50),
-      m4LookAt(ex, ey, ez, 0, 0, 0, 0, 1, 0));
+    const proj = m4Persp(45 * Math.PI / 180, w / h, 0.05, 50);
+    let ex, ey, ez, vp;
+    if(this.faceOn){
+      // 正対した「窓」として板を画面いっぱいに固定し、
+      // 傾きで視点を平行移動してレリーフの奥行きを覗き込む (オフアクシス投影)
+      this.faceTiltX += (this.targetTiltX - this.faceTiltX) * 0.15;
+      this.faceTiltY += (this.targetTiltY - this.faceTiltY) * 0.15;
+      const sa = w / h;
+      // 画面アスペクトに合わせ、画像を含む窓矩形 (中心原点) を決める
+      const halfX = Math.max(this.planeScale[0], this.planeScale[1] * sa);
+      const halfZ = halfX / sa;
+      const d = 1.6 * Math.max(halfX, halfZ);   // 視点高さ (小さいほど視差が強い)
+      const offX = this.faceTiltX * halfX * 0.6;
+      const offZ = this.faceTiltY * halfZ * 0.6;
+      ex = offX; ey = d; ez = offZ;
+      const n = 0.05, scale = n / d;
+      vp = m4Mul(
+        m4Frustum(
+          (-halfX - offX) * scale, (halfX - offX) * scale,
+          (offZ - halfZ) * scale, (offZ + halfZ) * scale, n, 50),
+        m4LookAt(ex, ey, ez, ex, ey - 1, ez, 0, 0, -1));
+    } else {
+      const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
+      ex = this.dist * cp * Math.sin(this.yaw);
+      ey = this.dist * sp;
+      ez = this.dist * cp * Math.cos(this.yaw);
+      vp = m4Mul(proj, m4LookAt(ex, ey, ez, 0, 0, 0, 0, 1, 0));
+    }
     const az = P.lightAz * Math.PI / 180, el = P.lightEl * Math.PI / 180;
 
     gl.useProgram(this.prog);

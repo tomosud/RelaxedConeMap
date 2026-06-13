@@ -50,3 +50,21 @@ progress{width:100%;height:8px;margin-top:8px}
   .mobileActions{position:sticky;top:0;z-index:10;padding:6px 0;background:#191c21}
   .mobileActions button{min-height:44px}
 }
+
+/* ===== スマホ専用フルスクリーンビュワー ===== */
+#mobileStart,#mobileBar{display:none}
+body.mobile{overflow:hidden}
+body.mobile header,body.mobile #panel{display:none}
+body.mobile main{height:100%}
+body.mobile #view{position:fixed;inset:0;z-index:5;flex:none;min-width:0}
+body.mobile:not(.viewing) #view{display:none}
+body.mobile:not(.viewing) #mobileStart{display:flex}
+body.mobile.viewing #mobileBar{display:block}
+#mobileStart{position:fixed;inset:0;z-index:30;align-items:center;justify-content:center;background:#14161a;padding:24px}
+.mStartInner{display:flex;flex-direction:column;gap:14px;width:min(360px,100%);text-align:center}
+.mStartInner h2{border:0;margin:0 0 6px;font-size:17px;color:#cfe1ff}
+.mStartInner button{min-height:54px;font-size:16px}
+#mStartStatus{min-height:18px;margin:4px 0 0}
+#mobileBar{position:fixed;left:0;right:0;bottom:0;z-index:25;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(20,22,26,.92),rgba(20,22,26,.55) 70%,transparent)}
+#mobileBar .slider{margin:0;color:#e6ebf2;font-size:13px}
+#mobileBar input{width:100%;margin-top:4px}

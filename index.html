@@ -2,7 +2,7 @@
 <html lang="ja">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Relaxed Cone Map Generator</title>
 <link rel="stylesheet" href="style.css">
 </head>
@@ -111,6 +111,21 @@
     <div id="glError" hidden>WebGL2 が利用できません。<br>最新の Chrome / Edge / Firefox をご利用ください。</div>
   </section>
 </main>
+
+<div id="mobileStart">
+  <div class="mStartInner">
+    <h2>写真から立体ビューを生成</h2>
+    <button id="mStartCamera" class="primary">写真を撮影</button>
+    <button id="mStartPhoto">写真を選択</button>
+    <p id="mStartStatus" class="hint"></p>
+  </div>
+</div>
+
+<div id="mobileBar">
+  <label class="slider">奥行き <span id="mLblDepth">0.15</span>
+    <input type="range" id="mRngDepth" min="0.01" max="5" step="0.005" value="0.15">
+  </label>
+</div>
 <script src="js/shaders.js"></script>
 <script src="js/gl.js"></script>
 <script src="js/generator.js"></script>

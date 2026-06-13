@@ -22,6 +22,23 @@ let processed = null;  // { canvas, maxH, n }
 const depthEngine = window.DepthEngine ? new DepthEngine() : null;
 let autoLightT = 0, lastT = performance.now();
 
+// スマホ (タッチ) モード判定
+const isMobile = window.matchMedia("(max-width:700px)").matches;
+if(isMobile) document.body.classList.add("mobile");
+
+// 傾き検出をデフォルト有効化 (ユーザージェスチャ内で試みる)
+async function enableTiltDefault(){
+  if(viewer.tiltEnabled) return;
+  try { await viewer.enableTilt(); } catch(_) { /* 不可ならドラッグ操作にフォールバック */ }
+}
+
+function enterMobileViewer(){
+  if(!isMobile) return;
+  document.body.classList.add("viewing");
+  viewer.setFaceOn(true);
+  enableTiltDefault();
+}
+
 // ---------- サンプル地形 (タイラブル) ----------
 function makeSampleHeight(n){
   const c = document.createElement("canvas");
@@ -142,6 +159,7 @@ function startGenerate(){
   $("btnAbort").hidden = false;
   $("btnSave").disabled = true;
   $("prog").value = 0;
+  enterMobileViewer();
 }
 
 function finishUI(aborted){
@@ -272,6 +290,8 @@ async function loadDepthFile(file){
       startGenerate();
     } catch(err) {
       $("status").textContent = "深度推定に失敗しました: " + (err.message || String(err));
+      const ms = $("mStartStatus");
+      if(ms) ms.textContent = "失敗しました: " + (err.message || String(err));
       $("btnGen").disabled = false;
     } finally {
       $("btnCamera").disabled = false;
@@ -296,6 +316,27 @@ $("cameraInput").addEventListener("change", e => loadDepthFile(e.target.files[0]
 $("depthFileInput").addEventListener("change", e => loadDepthFile(e.target.files[0]));
 $("btnCamera").addEventListener("click", () => $("cameraInput").click());
 $("btnPhoto").addEventListener("click", () => $("depthFileInput").click());
+
+// スマホスタート画面のボタン
+const mStartCamera = $("mStartCamera"), mStartPhoto = $("mStartPhoto");
+if(mStartCamera) mStartCamera.addEventListener("click", () => {
+  enableTiltDefault();
+  $("mStartStatus").textContent = "深度を推定中…";
+  $("cameraInput").click();
+});
+if(mStartPhoto) mStartPhoto.addEventListener("click", () => {
+  enableTiltDefault();
+  $("mStartStatus").textContent = "深度を推定中…";
+  $("depthFileInput").click();
+});
+
+// スマホ下部の奥行きスライダー (パネルの rngDepth と同期)
+const mRngDepth = $("mRngDepth");
+if(mRngDepth) mRngDepth.addEventListener("input", () => {
+  $("mLblDepth").textContent = mRngDepth.value;
+  $("rngDepth").value = mRngDepth.value;
+  $("lblDepth").textContent = mRngDepth.value;
+});
 $("btnDepth").addEventListener("click", () => $("depthFileInput").click());
 $("btnSample").addEventListener("click", () => { srcImage = makeSampleHeight(512); colorImage = null; startGenerate(); });
 $("btnGen").addEventListener("click", startGenerate);
@@ -348,18 +389,20 @@ function frame(){
     depth: +$("rngDepth").value,
     tile: +$("rngTile").value,
     coneSteps: +$("rngConeSteps").value,
-    shadow: $("chkShadow").checked,
-    shading: viewMode !== 4,
-    specular: $("chkSpecular").checked,
-    mode: viewMode,
+    shadow: isMobile ? false : $("chkShadow").checked,
+    shading: isMobile ? false : (viewMode !== 4),
+    specular: isMobile ? false : $("chkSpecular").checked,
+    mode: isMobile ? 0 : viewMode,
     lightAz: (+$("rngLightAz").value + autoLightT) % 360,
     lightEl: +$("rngLightEl").value,
   });
   requestAnimationFrame(frame);
 }
 
-// 初期表示: サンプル地形で自動生成
-srcImage = makeSampleHeight(512);
-startGenerate();
+// 初期表示: サンプル地形で自動生成 (スマホはスタート画面を表示)
+if(!isMobile){
+  srcImage = makeSampleHeight(512);
+  startGenerate();
+}
 requestAnimationFrame(frame);
 })();
