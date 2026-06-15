@@ -192,6 +192,71 @@ function savePNG(){
   }, "image/png");
 }
 
+// ---------- Unreal マテリアルを別ページで表示 ----------
+let unrealMaterialText = null;
+// 起動時に先読みしておく
+fetch("unreal_material/material.txt")
+  .then(r => r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))
+  .then(t => { unrealMaterialText = t; })
+  .catch(() => { /* クリック時に再取得を試みる */ });
+
+function openMaterialPage(text){
+  const json = JSON.stringify(text)
+    .replace(/</g, "\\u003c")
+    .replace(/>/g, "\\u003e");
+  const html =
+    "<!DOCTYPE html><html lang=\"ja\"><head><meta charset=\"utf-8\">" +
+    "<title>Unreal マテリアル テキスト</title>" +
+    "<style>body{margin:0;background:#15171c;color:#e2e6ee;font-family:system-ui,sans-serif}" +
+    "header{position:sticky;top:0;background:#1d2027;padding:12px 16px;border-bottom:1px solid #2a2e36;display:flex;gap:12px;align-items:center;flex-wrap:wrap}" +
+    "h1{font-size:14px;margin:0;font-weight:600}" +
+    "p{margin:0;font-size:12px;color:#9aa3b2}" +
+    "button{font-size:13px;padding:7px 12px;border-radius:6px;border:1px solid #465066;background:#2d5ba9;color:#fff;cursor:pointer}" +
+    "button:hover{background:#356ac4}" +
+    "textarea{display:block;width:100%;height:calc(100vh - 70px);box-sizing:border-box;border:0;padding:14px 16px;" +
+    "background:#15171c;color:#cdd3dd;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5;resize:none;white-space:pre;overflow:auto}" +
+    "</style></head><body>" +
+    "<header><h1>Unreal マテリアル テキスト</h1>" +
+    "<button id=\"sel\">全選択してコピー</button>" +
+    "<p>下のテキストを Unreal のマテリアルエディタに Ctrl+V で貼り付けてください。</p></header>" +
+    "<textarea id=\"ta\" readonly spellcheck=\"false\"></textarea>" +
+    "<script>var ta=document.getElementById('ta');" +
+    "ta.value=" + json + ";" +
+    "document.getElementById('sel').onclick=function(){ta.focus();ta.select();" +
+    "try{document.execCommand('copy');this.textContent='コピーしました';}catch(e){this.textContent='手動でコピーしてください';}};" +
+    "ta.focus();ta.select();<\/script>" +
+    "</body></html>";
+  const blob = new Blob([html], { type: "text/html;charset=utf-8" });
+  const url = URL.createObjectURL(blob);
+  const w = window.open(url, "_blank");
+  if(!w){ URL.revokeObjectURL(url); return false; }
+  setTimeout(() => URL.revokeObjectURL(url), 30000);
+  return true;
+}
+
+async function copyUnrealMaterial(){
+  const btn = $("btnCopyMaterial");
+  try {
+    let text = unrealMaterialText;
+    if(text == null){
+      const res = await fetch("unreal_material/material.txt");
+      if(!res.ok) throw new Error(`HTTP ${res.status}`);
+      text = await res.text();
+      unrealMaterialText = text;
+    }
+    if(!text || !text.trim()){
+      throw new Error("material.txt が空です。ファイルの内容を確認してください。");
+    }
+    const opened = openMaterialPage(text);
+    if(!opened) throw new Error("ポップアップがブロックされました。ポップアップを許可してください。");
+    $("status").textContent = "別ページに Unreal マテリアルのテキストを表示しました。全選択してコピーしてください。";
+  } catch(err) {
+    btn.textContent = "表示に失敗しました";
+    $("status").textContent = "Unreal マテリアルの表示に失敗しました: " + (err.message || String(err));
+    setTimeout(() => { btn.textContent = "Unreal マテリアルのテキストを開く"; }, 2500);
+  }
+}
+
 // ---------- UI ----------
 function bindLabel(rngId, lblId){
   const r = $(rngId), l = $(lblId);
@@ -342,6 +407,7 @@ $("btnSample").addEventListener("click", () => { srcImage = makeSampleHeight(512
 $("btnGen").addEventListener("click", startGenerate);
 $("btnAbort").addEventListener("click", () => generator.abort());
 $("btnSave").addEventListener("click", savePNG);
+$("btnCopyMaterial").addEventListener("click", copyUnrealMaterial);
 $("btnTilt").addEventListener("click", async () => {
   try {
     if(viewer.tiltEnabled){

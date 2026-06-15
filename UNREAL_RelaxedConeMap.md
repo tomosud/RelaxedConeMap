@@ -209,6 +209,11 @@ return N;   // タンジェント空間法線（そのまま Normal へ）
 
 ## 8. うまくいかないときのチェックリスト
 
+- **`[SM6] (Node TextureSample) Cannot cast from larger type float3 to smaller type float2.`**
+  → Relief 本体の Custom ノードの **Output Type が `CMOT Float3`（既定）のまま**になっている。
+  **`CMOT Float2` に変更**する（出力 UV は float2 なので）。
+  どうしても直らなければ、Custom 出力 → **ComponentMask(R,G のみ)** → TextureSample の UV、と間に挟む。
+  SM6 は float3→float2 の暗黙の切り詰めをエラー扱いするのが原因（旧来は警告で通っていた）。
 - **真っ平ら／模様だけで凹凸が出ない** → コーンマップの sRGB が ON のまま、または Compression が DXT。**sRGB OFF + VectorDisplacementmap** を確認。
 - **凹凸が裏返し（へこむ↔出っぱる）** → `ViewTS` を `*-1`、または法線の `dx/dy` 符号を反転。
 - **斜めから見るとUVが大きくズレて崩れる** → `Depth` を下げる。`v.z` のクランプが効いているか確認。
