@@ -106,6 +106,51 @@ function processSource(){
   const c = document.createElement("canvas");
   c.width = c.height = n;
   const ctx = c.getContext("2d", { willReadFrequently: true });
+  if(srcImage && srcImage.kind === "floatHeight"){
+    const src = srcImage.data;
+    const sw = srcImage.width;
+    const sh = srcImage.height;
+    const inv = $("chkInvert").checked;
+    const heightData = new Float32Array(n * n);
+    const im = ctx.createImageData(n, n);
+    const d = im.data;
+    let maxH = 0;
+
+    for(let y = 0; y < n; y++){
+      const sy = n > 1 ? y * (sh - 1) / (n - 1) : 0;
+      const y0 = Math.floor(sy);
+      const y1 = Math.min(sh - 1, y0 + 1);
+      const ty = sy - y0;
+      for(let x = 0; x < n; x++){
+        const sx = n > 1 ? x * (sw - 1) / (n - 1) : 0;
+        const x0 = Math.floor(sx);
+        const x1 = Math.min(sw - 1, x0 + 1);
+        const tx = sx - x0;
+        const a = src[y0 * sw + x0];
+        const b = src[y0 * sw + x1];
+        const cc = src[y1 * sw + x0];
+        const dd = src[y1 * sw + x1];
+        let v = (a * (1 - tx) + b * tx) * (1 - ty) + (cc * (1 - tx) + dd * tx) * ty;
+        if(inv) v = 1 - v;
+        v = Math.max(0, Math.min(1, v));
+        if(v > maxH) maxH = v;
+        heightData[y * n + x] = v;
+        const byte = Math.round(v * 255);
+        const i = (y * n + x) * 4;
+        d[i] = d[i+1] = d[i+2] = byte;
+        d[i+3] = 255;
+      }
+    }
+
+    ctx.putImageData(im, 0, 0);
+    processed = { canvas: c, heightData, maxH, n };
+    const tcv = $("thumb");
+    const tc = tcv.getContext("2d");
+    tc.imageSmoothingEnabled = true;
+    tc.clearRect(0, 0, tcv.width, tcv.height);
+    tc.drawImage(c, 0, 0, tcv.width, tcv.height);
+    return;
+  }
   ctx.drawImage(srcImage, 0, 0, n, n);
   const im = ctx.getImageData(0, 0, n, n);
   const d = im.data;
@@ -155,7 +200,7 @@ function makeSquareCanvas(source, n){
 function startGenerate(){
   if(!srcImage) srcImage = makeSampleHeight(512);
   processSource();
-  generator.setHeight(processed.canvas, processed.maxH, $("chkWrap").checked);
+  generator.setHeight(processed, processed.maxH, $("chkWrap").checked);
   viewer.setColorSource(
     colorImage ? makeSquareCanvas(colorImage, processed.n) : null,
     colorImage ? colorImage.width / colorImage.height : 1);
@@ -358,7 +403,12 @@ async function loadDepthFile(file){
       await depthEngine.initModel();
       $("status").textContent = "Estimating depth from image...";
       const result = await depthEngine.estimate(e.target.result);
-      srcImage = imageDataToCanvas(result.depth.imageData, result.depth.width, result.depth.height);
+      srcImage = {
+        kind: "floatHeight",
+        data: result.depth.heightData,
+        width: result.depth.width,
+        height: result.depth.height
+      };
       colorImage = imageDataToCanvas(result.original.imageData, result.original.width, result.original.height);
       startGenerate();
     } catch(err) {

@@ -1,4 +1,37 @@
 "use strict";
+
+const _halfFloatView = new Float32Array(1);
+const _halfUintView = new Uint32Array(_halfFloatView.buffer);
+
+function floatToHalfBits(value){
+  _halfFloatView[0] = value;
+  const x = _halfUintView[0];
+  const sign = (x >> 16) & 0x8000;
+  let mantissa = x & 0x007fffff;
+  let exponent = (x >> 23) & 0xff;
+
+  if(exponent === 0xff) return sign | (mantissa ? 0x7e00 : 0x7c00);
+  exponent = exponent - 127 + 15;
+  if(exponent >= 0x1f) return sign | 0x7c00;
+  if(exponent <= 0){
+    if(exponent < -10) return sign;
+    mantissa = (mantissa | 0x00800000) >> (1 - exponent);
+    return sign | ((mantissa + 0x00001000) >> 13);
+  }
+  return sign | (exponent << 10) | ((mantissa + 0x00001000) >> 13);
+}
+
+function makeHalfFloatHeight(data, n){
+  const out = new Uint16Array(n * n);
+  for(let y = 0; y < n; y++){
+    const srcRow = y * n;
+    const dstRow = (n - 1 - y) * n;
+    for(let x = 0; x < n; x++){
+      out[dstRow + x] = floatToHalfBits(Math.max(0, Math.min(1, data[srcRow + x])));
+    }
+  }
+  return out;
+}
 // Relaxed Cone Map の GPU 生成パイプライン。
 // 全オフセット (探索半径内の全テクセル) を距離昇順にソートし、
 // 128 個ずつのバッチに分けてフラグメントシェーダーで min 蓄積する。
@@ -34,6 +67,7 @@ class ConeMapGenerator {
     this.syncType = this.useFloatCone ? gl.FLOAT : gl.UNSIGNED_BYTE;
     this._syncBuf = this.useFloatCone ? new Float32Array(1) : new Uint8Array(1);
     this.heightTex = null;
+    this.heightTexKind = null;
     this.ping = [null, null];
     this.fbo = [null, null];
     this.exportTex = null;
@@ -47,26 +81,40 @@ class ConeMapGenerator {
     this.elapsed = 0;
   }
 
-  setHeight(canvas, maxHeight, wrap){
-    const gl = this.gl, n = canvas.width;
+  setHeight(source, maxHeight, wrap){
+    const gl = this.gl;
+    const canvas = source.canvas || source;
+    const heightData = source.heightData || null;
+    const n = canvas.width;
+    const heightTexKind = heightData ? "r16f" : "rgba8";
     this.maxHeight = maxHeight;
     this.wrap = wrap;
-    if(n !== this.size){
+    if(n !== this.size || heightTexKind !== this.heightTexKind){
       [this.heightTex, this.ping[0], this.ping[1], this.exportTex]
         .forEach(t => t && gl.deleteTexture(t));
       [this.fbo[0], this.fbo[1], this.exportFbo]
         .forEach(f => f && gl.deleteFramebuffer(f));
-      this.heightTex = makeTex(gl, n, n);
+      this.heightTex = heightData
+        ? makeTex(gl, n, n, { internalFormat: gl.R16F, format: gl.RED, type: gl.HALF_FLOAT })
+        : makeTex(gl, n, n);
       this.ping = [makeTex(gl, n, n, this.coneTexOpts), makeTex(gl, n, n, this.coneTexOpts)];
       this.fbo = [makeFBO(gl, this.ping[0]), makeFBO(gl, this.ping[1])];
       this.exportTex = makeTex(gl, n, n);
       this.exportFbo = makeFBO(gl, this.exportTex);
       this.size = n;
+      this.heightTexKind = heightTexKind;
     }
     gl.bindTexture(gl.TEXTURE_2D, this.heightTex);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    if(heightData){
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+      gl.texImage2D(
+        gl.TEXTURE_2D, 0, gl.R16F, n, n, 0,
+        gl.RED, gl.HALF_FLOAT, makeHalfFloatHeight(heightData, n));
+    } else {
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
+    }
     this.resetCone();
   }
 
