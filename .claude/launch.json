@@ -6,6 +6,12 @@
       "runtimeExecutable": "cmd",
       "runtimeArgs": ["/c", "python -m http.server %PORT%"],
       "autoPort": true
+    },
+    {
+      "name": "viralcut",
+      "runtimeExecutable": "cmd",
+      "runtimeArgs": ["/c", "python -m http.server %PORT% --directory C:\\work\\script\\video_edit"],
+      "autoPort": true
     }
   ]
 }
