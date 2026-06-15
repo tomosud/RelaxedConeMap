@@ -2,144 +2,147 @@
 
 https://tomosud.github.io/RelaxedConeMap/
 
-ハイトマップ画像（または写真）から **Relaxed Cone Step Mapping** 用のコーンマップを生成し、その場で 3D プレビューできる Web ツールです。
-生成・プレビューとも **WebGL2 (GPU)** で動作し、サーバー処理は不要。ブラウザだけで完結します。
+A browser-based tool that generates **cone maps for Relaxed Cone Step Mapping** from height map images or photos, then previews the result as a 3D relief surface.
+Both generation and preview rendering run on **WebGL2 (GPU)**, with no server-side processing required.
 
-> Relaxed Cone Step Mapping は GPU Gems 3 / Chapter 18
-> "Relaxed Cone Stepping for Relief Mapping" (F. Policarpo, M. M. Oliveira) の手法です。
-> 視差マッピング（レリーフマッピング）のレイマーチを、事前計算した「コーン比率」で大股に安全にスキップし、少ないステップ数で正確な凹凸表現が得られます。
-
----
-
-## できること
-
-- ハイトマップ画像から **コーンマップ PNG** を生成する
-- 写真や画像から **AI 深度推定** し、それをハイトマップとして使う
-- 生成結果をその場で **3D レリーフプレビュー** で確認する
-- 生成したコーンマップを **Unreal Engine のマテリアル**に取り込む
+> Relaxed Cone Step Mapping is based on GPU Gems 3, Chapter 18:
+> [Relaxed Cone Stepping for Relief Mapping](https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-18-relaxed-cone-stepping-relief-mapping)
+> by F. Policarpo and M. M. Oliveira.
+> It accelerates relief mapping raymarching with precomputed cone ratios, allowing large safe steps and accurate surface detail with fewer iterations.
 
 ---
 
-## 使い方（PC / デスクトップ）
+## Features
 
-1. ツールのページを開く（オンライン URL、またはローカルなら後述の `run_local.bat`）
-2. 左パネルの操作エリアに **ハイトマップ画像をドロップ**（または「サンプル地形を生成」でお試し）
-   - 普通の写真しか無い場合は **「画像から深度推定」**を使うと、AI が奥行きを推定してハイトマップにします
-3. 解像度・チャンネル・反転などを必要に応じて設定
-4. **「生成 (GPU)」**を押す。生成中もプレビューがリアルタイムに更新されます
-5. 右側のプレビューで凹凸を確認
-   - **左ドラッグ：回転 / マウスホイール：ズーム**
-   - 表示モード・ライト方向・深さなどを細かく調整できます
-6. 仕上がったら出力します
-   - **「コーンマップ PNG を保存」** … PNG ファイルとしてダウンロード
-   - **「Unreal マテリアルのテキストを開く」** … Unreal に貼り付け用のテキストを別ページで表示（後述）
-
-### Unreal Engine への取り込み
-
-PC 版には **「Unreal マテリアルのテキストを開く」**ボタンがあります。
-
-1. ボタンを押すと別ページが開き、Unreal マテリアル一式のテキストが表示されます
-2. そのページで **「全選択してコピー」**（または `Ctrl+A` → `Ctrl+C`）
-3. Unreal Engine の **マテリアルエディタ**を開き、グラフ上で **`Ctrl+V`** で貼り付け
-4. Relaxed Cone Step Mapping を行うノード一式がそのまま展開されます
-
-貼り付け後、生成・保存したコーンマップ PNG をテクスチャとしてマテリアルに割り当ててください。
+- Generate a **cone map PNG** from a height map image
+- Estimate **AI depth** from a photo or regular image, then use it as a height map
+- Inspect the generated result immediately in a **3D relief preview**
+- Import the generated cone map into an **Unreal Engine material**
 
 ---
 
-## 使い方（スマホ）
+## Usage (PC / Desktop)
 
-スマホで開くと、**写真からそのまま立体ビューを作る**ことに特化した全画面モードになります。
+1. Open the tool page, either online or locally with `run_local.bat`.
+2. Drop a **height map image** onto the left panel, or use **Try Sample Terrain**.
+   - If you only have a regular photo, use the photo depth-estimation option to let AI estimate depth and convert it into a height map.
+3. Adjust resolution, channel, inversion, and wrapping settings as needed.
+4. Click **Generate (GPU)**. The preview updates while generation is running.
+5. Inspect the relief in the preview on the right.
+   - **Drag:** rotate
+   - **Mouse wheel:** zoom
+   - Display mode, light direction, depth scale, and related options can be adjusted from the panel.
+6. Export the result when ready.
+   - **Save Cone Map PNG:** downloads the generated PNG file.
+   - **Open Unreal Material Text:** opens paste-ready Unreal material text on a separate page.
 
-1. 最初の画面で **「写真を撮影」**または **「写真を選択」**
-2. 選んだ写真を AI が深度推定し、自動でコーンマップを生成
-3. 生成が終わると全画面の立体プレビューに切り替わります
-4. **端末を傾ける**と視点が動きます（iOS Safari では初回にセンサー許可が必要）
-5. 下部のスライダーで **奥行き（深さ）**を調整できます
+### Unreal Engine Import
+
+The desktop UI includes an **Open Unreal Material Text** button.
+
+1. Click the button to open a separate page containing the Unreal material text.
+2. Click **Select All and Copy**, or use `Ctrl+A` then `Ctrl+C`.
+3. Open the **Material Editor** in Unreal Engine and paste into the graph with **`Ctrl+V`**.
+4. The Relaxed Cone Step Mapping node setup will be created in the material graph.
+
+After pasting, assign the generated cone map PNG as the material texture.
 
 ---
 
-## PC 版とスマホ版の挙動の違い
+## Usage (Mobile)
 
-| 項目 | PC / デスクトップ | スマホ |
+On mobile, the tool switches to a simplified full-screen workflow focused on generating a 3D preview directly from a photo.
+
+1. On the start screen, choose **Take Photo** or **Choose Photo**.
+2. The selected photo is processed with AI depth estimation, then a cone map is generated automatically.
+3. When generation finishes, the app switches to the full-screen 3D preview.
+4. **Tilt the device** to move the viewpoint. iOS Safari requires sensor permission on first use.
+5. Use the bottom slider to adjust **Depth**.
+
+---
+
+## Desktop and Mobile Differences
+
+| Item | PC / Desktop | Mobile |
 |---|---|---|
-| 画面構成 | 左に操作パネル＋右に大きなプレビュー | 全画面プレビュー中心のシンプル UI |
-| 入力の主役 | 画像ドロップ・サンプル地形・深度推定など多彩 | 「撮影」または「写真選択」からの深度推定が中心 |
-| 視点操作 | ドラッグで回転、ホイールでズーム | 端末の**傾きセンサー**で視点移動（自動で有効化） |
-| プレビュー表示モード | レリーフ／高さ／コーンマップ／レイマーチ回数など切替可 | レリーフ表示に固定（軽量化のため） |
-| ライティング | 影・スペキュラ・自動回転などフル機能 | 影・スペキュラはオフ（描画を軽くするため） |
-| コーンマップ PNG 保存 | 可能 | （プレビュー確認が中心） |
-| Unreal マテリアル取り込み | **可能（PC 専用ボタン）** | 非表示 |
+| Layout | Left control panel plus large preview on the right | Simplified full-screen preview |
+| Main input flow | Image drop, sample terrain, depth estimation | Photo capture or photo selection with depth estimation |
+| View controls | Drag to rotate, wheel to zoom | Device tilt sensor moves the viewpoint |
+| Preview modes | Relief, height map, cone map, raymarch iterations | Relief only for lighter rendering |
+| Lighting | Shadows, specular, auto-rotating light | Shadows and specular disabled for performance |
+| Cone map PNG export | Supported | Not exposed in the mobile workflow |
+| Unreal material import | Supported with desktop-only button | Hidden |
 
-> スマホ版はパフォーマンス重視のため、影・スペキュラ・表示モード切替などの重い機能を自動的にオフにしています。
-> 細かい調整やコーンマップの書き出し、Unreal への取り込みは **PC 版**をご利用ください。
+> The mobile version disables heavier preview features such as shadows, specular highlights, and display-mode switching to keep rendering responsive.
+> Use the desktop version for detailed tuning, cone map export, and Unreal Engine import.
 
 ---
 
-## 各パラメータの意味
+## Parameters
 
-| 項目 | 説明 |
+| Parameter | Meaning |
 |---|---|
-| 解像度 | 出力コーンマップのサイズ。大きいほど精細ですが生成時間が増えます |
-| チャンネル | 高さとして使う入力画像のチャンネル（輝度 / R / G / B / A） |
-| 高さを反転 | 白＝低・黒＝高 の画像（デプスマップ等）を使う場合に ON |
-| タイリング（ラップ） | タイル素材として使うなら ON（端を跨いで計算）。単発画像なら OFF |
-| 探索半径 | 周囲を何テクセル先まで調べるか。大きいほど正確ですが重くなります |
-| レイ探索ステップ | 1 オフセットあたりの前進サンプル数。多いほど高精度 |
-| 深さスケール | プレビューでの凹凸の深さ |
-| タイル数 | プレビュー面に同じ模様を何回繰り返して貼るか |
-| コーンステップ数 | プレビュー時のコーンステッピング反復回数。多いほど正確ですが重くなります |
+| Resolution | Output cone map size. Higher values add detail but take longer to generate. |
+| Channel | Input image channel used as height: luminance, R, G, B, or A. |
+| Invert Height | Enable when the source uses black as high and white as low, such as some depth maps. |
+| Tiling (Wrap) | Enable for tileable materials so calculations wrap across image edges. Disable for one-off images. |
+| Search Radius | How many surrounding texels are inspected. Larger values are more accurate but heavier. |
+| Ray Search Steps | Number of forward samples per offset. Higher values improve accuracy. |
+| Depth Scale | Relief depth used in the preview. |
+| Tile Count | How many times the same pattern repeats on the preview surface. |
+| Cone Steps | Cone-stepping iteration count used in the preview. More steps are more accurate but heavier. |
 
-高解像度＋広い探索半径では生成に数十秒かかることがあります（進捗バー表示・中止可能で、UI は固まりません）。
+High resolution with a large search radius can take tens of seconds to generate.
+Progress is shown in the UI, generation can be canceled, and the interface remains responsive.
 
 ---
 
-## 出力コーンマップ PNG のフォーマット
+## Output Cone Map PNG Format
 
-入力と同じ正方形の PNG です。
+The output is a square PNG matching the selected resolution.
 
-| チャンネル | 内容 |
+| Channel | Contents |
 |---|---|
-| R | 高さ（0–1） |
-| G | コーン比率（0–1）… 1.0 = 制約なし |
-| B / A | 未使用 |
+| R | Height (0-1) |
+| G | Cone ratio (0-1), where 1.0 means unconstrained |
+| B / A | Unused |
 
 ---
 
-## ローカルで動かす
+## Running Locally
 
-`run_local.bat` をダブルクリックしてください（Python 3 が必要です）。
-`http://localhost:8765/` が自動で開きます。
+Double-click `run_local.bat` to start the local server. Python 3 is required.
+It opens `http://localhost:8765/` automatically.
 
-> ファイルを `file://` で直接開くと、Unreal マテリアルのテキスト表示や深度推定などの一部機能が動きません。
-> 必ず `run_local.bat`（ローカルサーバー経由）で開いてください。
+> Some features, including Unreal material text loading and depth estimation, will not work correctly when opening files directly with `file://`.
+> Use `run_local.bat` so the app runs through a local web server.
 
-ブラウザ要件：WebGL2 対応の Chrome / Edge / Firefox / Safari。
+Browser requirements: a WebGL2-capable version of Chrome, Edge, Firefox, or Safari.
 
 ---
 
-## ファイル構成
+## File Layout
 
-```
+```text
 index.html              UI
 style.css
-js/shaders.js           生成・プレビュー両方の GLSL
-js/generator.js         コーンマップ生成パイプライン
-js/viewer.js            3D プレビュー
-js/depth.js             AI 深度推定 (ONNX Runtime Web)
-js/main.js              UI 結線・サンプル地形・PNG / マテリアル入出力
-model/                  深度推定モデル
-unreal_material/        Unreal 貼り付け用マテリアルテキスト
-run_local.bat           ローカル確認用 (Python の http.server)
+js/shaders.js           GLSL for generation and preview
+js/generator.js         Cone map generation pipeline
+js/viewer.js            3D preview
+js/depth.js             AI depth estimation (ONNX Runtime Web)
+js/main.js              UI wiring, sample terrain, PNG and material I/O
+model/                  Depth estimation model
+unreal_material/        Paste-ready Unreal material text
+run_local.bat           Local test server using Python http.server
 ```
 
 ---
 
-## 参考文献
+## References
 
-- F. Policarpo, M. M. Oliveira, "Relaxed Cone Stepping for Relief Mapping", GPU Gems 3, Chapter 18
-- J. Dummer, "Cone Step Mapping: An Iterative Ray-Heightfield Intersection Algorithm"
+- F. Policarpo and M. M. Oliveira, ["Relaxed Cone Stepping for Relief Mapping"](https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-18-relaxed-cone-stepping-relief-mapping), GPU Gems 3, Chapter 18.
+- J. Dummer, "Cone Step Mapping: An Iterative Ray-Heightfield Intersection Algorithm".
 
-## ライセンス
+## License
 
 MIT
