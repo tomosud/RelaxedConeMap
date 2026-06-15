@@ -77,7 +77,7 @@ void main(){
 }
 `,
 
-// プレビュー: XZ 平面のクワッド
+// プレビュー: XY 垂直面のクワッド
 viewVS: `#version 300 es
 const vec2 q[4] = vec2[4](vec2(-1.0,-1.0), vec2(1.0,-1.0), vec2(-1.0,1.0), vec2(1.0,1.0));
 uniform mat4 uVP;
@@ -86,8 +86,8 @@ out vec3 vWorld;
 out vec2 vUV;
 void main(){
   vec2 p = q[gl_VertexID];
-  vWorld = vec3(p.x * uPlaneScale.x, 0.0, p.y * uPlaneScale.y);
-  vUV = vec2(p.x, -p.y) * 0.5 + 0.5;
+  vWorld = vec3(p.x * uPlaneScale.x, p.y * uPlaneScale.y, 0.0);
+  vUV = p * 0.5 + 0.5;
   gl_Position = uVP * vec4(vWorld, 1.0);
 }
 `,
@@ -131,12 +131,12 @@ void main(){
 
   vec3 wdir = normalize(vWorld - uCam);
   float ds = max(uDepth, 1e-4);
-  // テクスチャ空間 (u, v, depth) でのレイ方向
-  // u = (x+1)/2*tile, v = (1-z)/2*tile なので v 成分は z の符号反転
+  // テクスチャ空間 (u, v, depth) でのレイ方向。
+  // 垂直面なので depth はワールド -Z 方向、v はワールド Y と同じ向き。
   vec3 dir = vec3(
     wdir.x * 0.5 * uTile / uPlaneScale.x,
-    -wdir.z * 0.5 * uTile / uPlaneScale.y,
-    -wdir.y / ds);
+    wdir.y * 0.5 * uTile / uPlaneScale.y,
+    -wdir.z / ds);
   if(dir.z < 1e-5){ outColor = vec4(0.0); return; }
   dir /= dir.z;                       // dir.z = 1 (深さ単位で前進)
   float rr = length(dir.xy);
@@ -174,20 +174,20 @@ void main(){
   // --- 法線 (中央差分) ---
   vec2 e = 1.0 / vec2(textureSize(uHeight, 0));
   float hx = hAt(p.xy + vec2(e.x, 0.0)) - hAt(p.xy - vec2(e.x, 0.0));
-  float hz = hAt(p.xy + vec2(0.0, e.y)) - hAt(p.xy - vec2(0.0, e.y));
+  float hy = hAt(p.xy + vec2(0.0, e.y)) - hAt(p.xy - vec2(0.0, e.y));
   float kx = (hx * ds) / (2.0 * e.x * (2.0 * uPlaneScale.x / uTile));
-  float kz = (hz * ds) / (2.0 * e.y * (2.0 * uPlaneScale.y / uTile));
-  vec3 N = normalize(vec3(-kx, 1.0, kz));   // dv/dz < 0 なので z 成分は符号反転
+  float ky = (hy * ds) / (2.0 * e.y * (2.0 * uPlaneScale.y / uTile));
+  vec3 N = normalize(vec3(-kx, -ky, 1.0));
 
   // --- ライティング ---
   vec3 L = normalize(uLight);
   float diff = max(dot(N, L), 0.0);
   float lit = 1.0;
-  if(uShadow && (uShading ? diff > 0.0 : true) && L.y > 0.05){
+  if(uShadow && (uShading ? diff > 0.0 : true) && L.z > 0.05){
     vec3 ld = vec3(
       L.x * 0.5 * uTile / uPlaneScale.x,
-      -L.z * 0.5 * uTile / uPlaneScale.y,
-      -L.y / ds);
+      L.y * 0.5 * uTile / uPlaneScale.y,
+      -L.z / ds);
     ld /= -ld.z;                      // ld.z = -1 (上方向へ)
     float t0 = p.z;
     for(int i = 1; i <= 24; i++){

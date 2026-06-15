@@ -38,7 +38,7 @@
       <div class="row">
         <label>Resolution
           <select id="selSize">
-            <option>128</option><option selected>256</option><option>512</option><option>1024</option>
+            <option>128</option><option>256</option><option selected>512</option><option>1024</option>
           </select>
         </label>
         <label>Channel
@@ -99,9 +99,9 @@
         <input type="range" id="rngConeSteps" min="4" max="64" step="1" value="24">
       </label>
       <div class="row">
-        <label><input type="checkbox" id="chkShadow" checked> Self Shadow</label>
-        <label><input type="checkbox" id="chkSpecular" checked> Specular</label>
-        <label><input type="checkbox" id="chkAutoLight" checked> Auto Rotate Light</label>
+        <label><input type="checkbox" id="chkShadow"> Self Shadow</label>
+        <label><input type="checkbox" id="chkSpecular"> Specular</label>
+        <label><input type="checkbox" id="chkAutoLight"> Auto Rotate Light</label>
         <label><input type="checkbox" id="chkNoShading"> No Shading</label>
       </div>
       <button id="btnTilt" class="sensorButton mobileOnly">Enable Tilt Control</button>
@@ -111,7 +111,7 @@
       <label class="slider">Light Elevation <span id="lblLightEl">45</span> deg
         <input type="range" id="rngLightEl" min="10" max="80" value="45">
       </label>
-      <div class="hint">Drag: rotate / Wheel: zoom</div>
+      <div class="hint">Left-drag: orbit / Right-drag: pan / Wheel: zoom</div>
     </section>
   </aside>
 

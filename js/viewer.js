@@ -59,14 +59,16 @@ class Viewer {
     this.colorTex = null;
     this.hasColor = false;
     this.planeScale = [1, 1];
-    this.yaw = 0.6;
-    this.pitch = 0.95;
+    this.yaw = 0;
+    this.pitch = 0;
     this.targetYaw = this.yaw;
     this.targetPitch = this.pitch;
     this.dist = 2.6;
     this.faceOn = false;
     this.faceTiltX = 0;
     this.faceTiltY = 0;
+    this.panX = 0;
+    this.panY = 0;
     this.targetTiltX = 0;
     this.targetTiltY = 0;
     this.tiltEnabled = false;
@@ -93,24 +95,48 @@ class Viewer {
 
   _bindInput(){
     const cv = this.canvas;
-    let drag = false, lx = 0, ly = 0;
+    let drag = false, dragButton = 0, lx = 0, ly = 0;
+    cv.addEventListener("contextmenu", e => e.preventDefault());
     cv.addEventListener("pointerdown", e => {
-      drag = true; lx = e.clientX; ly = e.clientY;
+      if(e.pointerType === "mouse" && e.button !== 0 && e.button !== 2) return;
+      e.preventDefault();
+      drag = true; dragButton = e.button; lx = e.clientX; ly = e.clientY;
       this.targetYaw = this.yaw;
       this.targetPitch = this.pitch;
+      this.targetTiltX = this.faceTiltX;
+      this.targetTiltY = this.faceTiltY;
       this.tiltBase = null;
-      cv.setPointerCapture(e.pointerId);
+      try { cv.setPointerCapture(e.pointerId); } catch(_) {}
     });
     cv.addEventListener("pointermove", e => {
       if(!drag) return;
-      this.yaw -= (e.clientX - lx) * 0.008;
-      this.pitch += (e.clientY - ly) * 0.008;
-      this.pitch = Math.min(1.45, Math.max(0.15, this.pitch));
-      this.targetYaw = this.yaw;
-      this.targetPitch = this.pitch;
+      e.preventDefault();
+      const dx = e.clientX - lx;
+      const dy = e.clientY - ly;
+      if(dragButton === 2){
+        const panScale = this.dist * 0.0018;
+        const right = [Math.cos(this.yaw), 0, -Math.sin(this.yaw)];
+        const up = [
+          -Math.sin(this.yaw) * Math.sin(this.pitch),
+          Math.cos(this.pitch),
+          -Math.cos(this.yaw) * Math.sin(this.pitch)
+        ];
+        this.panX += (-dx * right[0] + dy * up[0]) * panScale;
+        this.panY += (-dx * right[1] + dy * up[1]) * panScale;
+      } else if(this.faceOn){
+        this.targetTiltX = Math.min(1, Math.max(-1, this.targetTiltX - (e.clientX - lx) * 0.006));
+        this.targetTiltY = Math.min(1, Math.max(-1, this.targetTiltY + (e.clientY - ly) * 0.006));
+      } else {
+        this.yaw += dx * 0.008;
+        this.pitch -= dy * 0.008;
+        this.pitch = Math.min(1.45, Math.max(-1.45, this.pitch));
+        this.targetYaw = this.yaw;
+        this.targetPitch = this.pitch;
+      }
       lx = e.clientX; ly = e.clientY;
     });
     cv.addEventListener("pointerup", () => drag = false);
+    cv.addEventListener("pointercancel", () => drag = false);
     cv.addEventListener("wheel", e => {
       e.preventDefault();
       this.dist *= Math.exp(e.deltaY * 0.001);
@@ -170,7 +196,7 @@ class Viewer {
     const dx = clamp(e.gamma - this.tiltBase.gamma, -35, 35);
     const dy = clamp(e.beta - this.tiltBase.beta, -35, 35);
     this.targetYaw = this.tiltBase.yaw - dx * 0.018;
-    this.targetPitch = clamp(this.tiltBase.pitch + dy * 0.014, 0.15, 1.45);
+    this.targetPitch = clamp(this.tiltBase.pitch + dy * 0.014, -1.45, 1.45);
   }
 
   render(heightTex, coneTex, P){
@@ -199,23 +225,23 @@ class Viewer {
       const sa = w / h;
       // 画面アスペクトに合わせ、画像を含む窓矩形 (中心原点) を決める
       const halfX = Math.max(this.planeScale[0], this.planeScale[1] * sa);
-      const halfZ = halfX / sa;
-      const d = 1.6 * Math.max(halfX, halfZ);   // 視点高さ (小さいほど視差が強い)
-      const offX = this.faceTiltX * halfX * 0.6;
-      const offZ = this.faceTiltY * halfZ * 0.6;
-      ex = offX; ey = d; ez = offZ;
-      const n = 0.05, scale = n / d;
+      const halfY = halfX / sa;
+      const offX = this.panX + this.faceTiltX * halfX * 0.6;
+      const offY = this.panY - this.faceTiltY * halfY * 0.6;
+      const viewDist = 0.62 * this.dist * Math.max(halfX, halfY);
+      ex = offX; ey = offY; ez = viewDist;
+      const n = 0.05, scale = n / viewDist;
       vp = m4Mul(
         m4Frustum(
           (-halfX - offX) * scale, (halfX - offX) * scale,
-          (offZ - halfZ) * scale, (offZ + halfZ) * scale, n, 50),
-        m4LookAt(ex, ey, ez, ex, ey - 1, ez, 0, 0, -1));
+          (-halfY - offY) * scale, (halfY - offY) * scale, n, 50),
+        m4LookAt(ex, ey, ez, ex, ey, ez - 1, 0, 1, 0));
     } else {
       const cp = Math.cos(this.pitch), sp = Math.sin(this.pitch);
       ex = this.dist * cp * Math.sin(this.yaw);
       ey = this.dist * sp;
       ez = this.dist * cp * Math.cos(this.yaw);
-      vp = m4Mul(proj, m4LookAt(ex, ey, ez, 0, 0, 0, 0, 1, 0));
+      vp = m4Mul(proj, m4LookAt(ex + this.panX, ey + this.panY, ez, this.panX, this.panY, 0, 0, 1, 0));
     }
     const az = P.lightAz * Math.PI / 180, el = P.lightEl * Math.PI / 180;
 
