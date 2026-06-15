@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="ja">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
@@ -9,128 +9,128 @@
 <body>
 <header>
   <h1>Relaxed Cone Map Generator</h1>
-  <span class="sub">ハイトマップ → Relaxed Cone Step Mapping 用コーンマップ生成 &amp; プレビュー (WebGL2 / GPU)</span>
+  <span class="sub">Generate and preview cone maps for Relaxed Cone Step Mapping from height maps or photos (WebGL2 / GPU)</span>
 </header>
 <main>
   <aside id="panel">
     <section>
-      <h2>入力</h2>
+      <h2>Input</h2>
       <input type="file" id="fileInput" accept="image/*" hidden>
       <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="depthFileInput" accept="image/*" hidden>
 
-      <h3 class="method">① ハイトマップから</h3>
-      <div id="dropZone">画像をドロップ<br>またはクリックして選択</div>
-      <button id="btnHeight" class="fullBtn mobileOnly">ハイトマップ画像を選択</button>
-      <div class="hint">白いほど高い「高さ画像」をそのまま使います。</div>
+      <h3 class="method">1. From Height Map</h3>
+      <div id="dropZone">Drop an image here<br>or click to choose a file</div>
+      <button id="btnHeight" class="fullBtn mobileOnly">Choose Height Map Image</button>
+      <div class="hint">Uses the source as a height map, where brighter pixels are higher.</div>
 
-      <h3 class="method">② 写真から（深度推定）</h3>
+      <h3 class="method">2. From Photo (Depth Estimation)</h3>
       <div class="row">
-        <button id="btnCamera" class="primary mobileOnly">撮影して深度生成</button>
-        <button id="btnPhoto" class="fullBtn">写真を選んで深度生成</button>
+        <button id="btnCamera" class="primary mobileOnly">Capture and Generate Depth</button>
+        <button id="btnPhoto" class="fullBtn">Choose Photo and Generate Depth</button>
       </div>
-      <div class="hint">普通の写真から AI が奥行きを推定してハイトマップにします。</div>
+      <div class="hint">Estimates depth from a regular photo with AI and converts it to a height map.</div>
 
-      <button id="btnSample" class="fullBtn sampleBtn">サンプル地形で試す</button>
+      <button id="btnSample" class="fullBtn sampleBtn">Try Sample Terrain</button>
 
       <canvas id="thumb" width="220" height="220"></canvas>
       <div class="row">
-        <label>解像度
+        <label>Resolution
           <select id="selSize">
             <option>128</option><option selected>256</option><option>512</option><option>1024</option>
           </select>
         </label>
-        <label>チャンネル
+        <label>Channel
           <select id="selChannel">
-            <option value="luma" selected>輝度</option>
+            <option value="luma" selected>Luminance</option>
             <option value="r">R</option><option value="g">G</option>
             <option value="b">B</option><option value="a">A</option>
           </select>
         </label>
       </div>
       <div class="row">
-        <label><input type="checkbox" id="chkInvert"> 高さを反転</label>
-        <label><input type="checkbox" id="chkWrap" checked> タイリング(ラップ)</label>
+        <label><input type="checkbox" id="chkInvert"> Invert Height</label>
+        <label><input type="checkbox" id="chkWrap" checked> Tiling (Wrap)</label>
       </div>
     </section>
 
     <section>
-      <h2>コーンマップ生成</h2>
-      <label class="slider">探索半径 <span id="lblRadius">48</span> px
+      <h2>Cone Map Generation</h2>
+      <label class="slider">Search Radius <span id="lblRadius">48</span> px
         <input type="range" id="rngRadius" min="8" max="192" value="48">
       </label>
-      <label class="slider">レイ探索ステップ <span id="lblSteps">24</span>
+      <label class="slider">Ray Search Steps <span id="lblSteps">24</span>
         <input type="range" id="rngSteps" min="8" max="64" value="24">
       </label>
       <div class="row">
-        <button id="btnGen" class="primary">生成 (GPU)</button>
-        <button id="btnAbort" hidden>中止</button>
+        <button id="btnGen" class="primary">Generate (GPU)</button>
+        <button id="btnAbort" hidden>Cancel</button>
       </div>
       <progress id="prog" max="1" value="0"></progress>
-      <div id="status">待機中</div>
-      <button id="btnSave" disabled>コーンマップ PNG を保存</button>
-      <div class="hint">出力PNG: R = 高さ / G = コーン比率</div>
-      <button id="btnCopyMaterial" class="desktopOnly">Unreal マテリアルのテキストを開く</button>
-      <div class="hint desktopOnly">Unreal Engine のマテリアルエディタにそのままペーストできるノード一式を別ページで表示します。表示されたテキストを全選択してコピーし、マテリアルエディタに貼り付けてください。</div>
+      <div id="status">Waiting</div>
+      <button id="btnSave" disabled>Save Cone Map PNG</button>
+      <div class="hint">Output PNG: R = height / G = cone ratio</div>
+      <button id="btnCopyMaterial" class="desktopOnly">Open Unreal Material Text</button>
+      <div class="hint desktopOnly">Shows node text for Unreal Engine's Material Editor on a separate page. Select all of the displayed text, copy it, and paste it into the Material Editor.</div>
     </section>
 
     <section>
-      <h2>プレビュー</h2>
-      <label>表示
+      <h2>Preview</h2>
+      <label>Display
         <select id="selMode">
-          <option value="0" selected>レリーフ (cone step)</option>
-          <option value="1">ハイトマップ</option>
-          <option value="2">コーンマップ</option>
-          <option value="3">レイマーチ回数</option>
+          <option value="0" selected>Relief (Cone Step)</option>
+          <option value="1">Height Map</option>
+          <option value="2">Cone Map</option>
+          <option value="3">Raymarch Iterations</option>
         </select>
       </label>
-      <div class="heatLegend" aria-label="レイマーチ回数ヒートマップ凡例">
+      <div class="heatLegend" aria-label="Raymarch iteration heat map legend">
         <div class="heatRamp"></div>
         <div class="heatTicks" id="heatTicks"></div>
       </div>
-      <label class="slider">深さスケール <span id="lblDepth">0.15</span>
+      <label class="slider">Depth Scale <span id="lblDepth">0.15</span>
         <input type="range" id="rngDepth" min="0.01" max="5" step="0.005" value="0.15">
       </label>
-      <label class="slider">タイル数 <span id="lblTile">1</span>
+      <label class="slider">Tile Count <span id="lblTile">1</span>
         <input type="range" id="rngTile" min="1" max="4" step="1" value="1">
       </label>
-      <label class="slider">コーンステップ数 <span id="lblConeSteps">24</span>
+      <label class="slider">Cone Steps <span id="lblConeSteps">24</span>
         <input type="range" id="rngConeSteps" min="4" max="64" step="1" value="24">
       </label>
       <div class="row">
-        <label><input type="checkbox" id="chkShadow" checked> セルフシャドウ</label>
-        <label><input type="checkbox" id="chkSpecular" checked> スペキュラー</label>
-        <label><input type="checkbox" id="chkAutoLight" checked> ライト自動回転</label>
-        <label><input type="checkbox" id="chkNoShading"> シェーディング無し</label>
+        <label><input type="checkbox" id="chkShadow" checked> Self Shadow</label>
+        <label><input type="checkbox" id="chkSpecular" checked> Specular</label>
+        <label><input type="checkbox" id="chkAutoLight" checked> Auto Rotate Light</label>
+        <label><input type="checkbox" id="chkNoShading"> No Shading</label>
       </div>
-      <button id="btnTilt" class="sensorButton mobileOnly">傾き操作を有効化</button>
-      <label class="slider">ライト方位 <span id="lblLightAz">45</span>°
+      <button id="btnTilt" class="sensorButton mobileOnly">Enable Tilt Control</button>
+      <label class="slider">Light Azimuth <span id="lblLightAz">45</span> deg
         <input type="range" id="rngLightAz" min="0" max="360" value="45">
       </label>
-      <label class="slider">ライト仰角 <span id="lblLightEl">45</span>°
+      <label class="slider">Light Elevation <span id="lblLightEl">45</span> deg
         <input type="range" id="rngLightEl" min="10" max="80" value="45">
       </label>
-      <div class="hint">ドラッグ: 回転 / ホイール: ズーム</div>
+      <div class="hint">Drag: rotate / Wheel: zoom</div>
     </section>
   </aside>
 
   <section id="view">
     <canvas id="glcanvas"></canvas>
-    <div id="glError" hidden>WebGL2 が利用できません。<br>最新の Chrome / Edge / Firefox をご利用ください。</div>
+    <div id="glError" hidden>WebGL2 is not available.<br>Please use a recent version of Chrome, Edge, or Firefox.</div>
   </section>
 </main>
 
 <div id="mobileStart">
   <div class="mStartInner">
-    <h2>写真から立体ビューを生成</h2>
-    <button id="mStartCamera" class="primary">写真を撮影</button>
-    <button id="mStartPhoto">写真を選択</button>
+    <h2>Generate a 3D Preview from a Photo</h2>
+    <button id="mStartCamera" class="primary">Take Photo</button>
+    <button id="mStartPhoto">Choose Photo</button>
     <p id="mStartStatus" class="hint"></p>
   </div>
 </div>
 
 <div id="mobileBar">
-  <label class="slider">奥行き <span id="mLblDepth">0.15</span>
+  <label class="slider">Depth <span id="mLblDepth">0.15</span>
     <input type="range" id="mRngDepth" min="0.01" max="5" step="0.005" value="0.15">
   </label>
 </div>
