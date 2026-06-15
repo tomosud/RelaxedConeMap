@@ -410,6 +410,10 @@ async function loadDepthFile(file){
         height: result.depth.height
       };
       colorImage = imageDataToCanvas(result.original.imageData, result.original.width, result.original.height);
+      $("chkShadow").checked = false;
+      $("chkSpecular").checked = false;
+      $("chkAutoLight").checked = false;
+      $("chkNoShading").checked = true;
       startGenerate();
     } catch(err) {
       $("status").textContent = "Depth estimation failed: " + (err.message || String(err));
