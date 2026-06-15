@@ -39,6 +39,12 @@ function enterMobileViewer(){
   enableTiltDefault();
 }
 
+// サンプルボタンは初回(ユーザー入力前)だけ表示する
+function hideSampleButton(){
+  const b = $("btnSample");
+  if(b) b.hidden = true;
+}
+
 // ---------- サンプル地形 (タイラブル) ----------
 function makeSampleHeight(n){
   const c = document.createElement("canvas");
@@ -276,6 +282,7 @@ function bindTooltips(){
     btnCamera: "iPhone やスマホのカメラで撮影し、その写真から深度とコーンマップを続けて生成します。",
     btnPhoto: "端末内の写真を選び、その写真から深度とコーンマップを続けて生成します。",
     btnSample: "動作確認用のサンプルハイトマップを生成し、そのままコーンマップ生成を開始します。",
+    btnHeight: "ハイトマップ画像を選んで読み込みます。白に近いほど高く、黒に近いほど低い地形として扱います。",
     selSize: "生成するコーンマップ PNG の一辺の解像度です。大きいほど細かくなりますが、生成時間とメモリ使用量が増えます。",
     selChannel: "入力画像のどのチャンネルを高さとして使うかを選びます。通常は輝度で、専用画像なら R/G/B/A を指定します。",
     chkInvert: "高さを反転します。黒が高く白が低い画像を使う場合に ON にします。",
@@ -284,8 +291,7 @@ function bindTooltips(){
     rngSteps: "コーンマップ生成時の検査レイを何分割してサンプルするかです。多いほどコーン比率の精度が上がりますが、生成時間が増えます。",
     btnGen: "現在の入力画像と設定で、Relaxed Cone Step Mapping 用のコーンマップを GPU で再生成します。",
     btnSave: "生成済みの PNG を保存します。R に高さ、G にコーン比率が入ります。",
-    selMode: "プレビューの表示内容を切り替えます。レリーフ表示、元の高さ、コーン比率、レイマーチ回数、シェーディング無し表示の確認に使います。",
-    btnDepth: "任意の写真や画像から AI で深度を推定し、その深度をハイトマップとしてコーンマップ生成まで進めます。このルートではプレビュー表面に元画像のカラーを使います。",
+    selMode: "プレビューの表示内容を切り替えます。レリーフ表示、元の高さ、コーン比率、レイマーチ回数の確認に使います。",
     rngDepth: "プレビュー上で高さをどれくらい深く見せるかです。大きいほど凹凸が強くなりますが、破綻も目立ちやすくなります。",
     rngTile: "プレビュー面に同じハイトマップを何回繰り返して貼るかです。タイル継ぎ目や繰り返しパターンの確認に使います。",
     rngConeSteps: "プレビュー描画時の Relaxed Cone Stepping の最大反復回数です。足りないと交点探索が途中で止まりやすく、多いほど重くなります。レイマーチ回数表示の色は 32 回で最大色に飽和します。",
@@ -293,6 +299,7 @@ function bindTooltips(){
     chkSpecular: "ライトによる光沢ハイライトを表示します。元画像カラーの確認を優先したい場合は OFF にします。",
     chkAutoLight: "ライトの方位角を自動で回転させます。凹凸や影の出方を連続的に確認したい時に使います。",
     btnTilt: "スマホの傾きセンサーでプレビューの視点を動かします。iOS Safari ではタップ後に許可が必要です。",
+    chkNoShading: "ライトによる陰影を使わず、表面色をそのまま表示します。元画像のカラーを確認したいときに ON にします。",
     rngLightAz: "ライトの水平角度です。影やハイライトが左右どちらから入るかを調整します。",
     rngLightEl: "ライトの仰角です。低いほど影が長く、高いほど正面から照らした見た目になります。"
   };
@@ -323,6 +330,7 @@ bindTooltips();
 
 function loadFile(file){
   if(!file || !file.type.startsWith("image/")) return;
+  hideSampleButton();
   const url = URL.createObjectURL(file);
   const img = new Image();
   img.onload = () => { srcImage = img; colorImage = null; URL.revokeObjectURL(url); startGenerate(); };
@@ -336,6 +344,7 @@ async function loadDepthFile(file){
     $("status").textContent = "深度推定エンジンを初期化できませんでした";
     return;
   }
+  hideSampleButton();
   if(generator.busy) generator.abort();
   const reader = new FileReader();
   reader.onerror = () => $("status").textContent = "画像を読み込めませんでした";
@@ -343,7 +352,6 @@ async function loadDepthFile(file){
     try {
       $("btnCamera").disabled = true;
       $("btnPhoto").disabled = true;
-      $("btnDepth").disabled = true;
       $("btnGen").disabled = true;
       $("btnSave").disabled = true;
       $("status").textContent = "深度推定モデルを読み込み中...";
@@ -361,7 +369,6 @@ async function loadDepthFile(file){
     } finally {
       $("btnCamera").disabled = false;
       $("btnPhoto").disabled = false;
-      $("btnDepth").disabled = false;
     }
   };
   reader.readAsDataURL(file);
@@ -379,6 +386,7 @@ dz.addEventListener("drop", e => {
 $("fileInput").addEventListener("change", e => loadFile(e.target.files[0]));
 $("cameraInput").addEventListener("change", e => loadDepthFile(e.target.files[0]));
 $("depthFileInput").addEventListener("change", e => loadDepthFile(e.target.files[0]));
+$("btnHeight").addEventListener("click", () => $("fileInput").click());
 $("btnCamera").addEventListener("click", () => $("cameraInput").click());
 $("btnPhoto").addEventListener("click", () => $("depthFileInput").click());
 
@@ -402,7 +410,6 @@ if(mRngDepth) mRngDepth.addEventListener("input", () => {
   $("rngDepth").value = mRngDepth.value;
   $("lblDepth").textContent = mRngDepth.value;
 });
-$("btnDepth").addEventListener("click", () => $("depthFileInput").click());
 $("btnSample").addEventListener("click", () => { srcImage = makeSampleHeight(512); colorImage = null; startGenerate(); });
 $("btnGen").addEventListener("click", startGenerate);
 $("btnAbort").addEventListener("click", () => generator.abort());
@@ -456,7 +463,7 @@ function frame(){
     tile: +$("rngTile").value,
     coneSteps: +$("rngConeSteps").value,
     shadow: isMobile ? false : $("chkShadow").checked,
-    shading: isMobile ? false : (viewMode !== 4),
+    shading: isMobile ? false : !$("chkNoShading").checked,
     specular: isMobile ? false : $("chkSpecular").checked,
     mode: isMobile ? 0 : viewMode,
     lightAz: (+$("rngLightAz").value + autoLightT) % 360,

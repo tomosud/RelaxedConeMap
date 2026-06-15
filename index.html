@@ -14,19 +14,25 @@
 <main>
   <aside id="panel">
     <section>
-      <h2>入力ハイトマップ</h2>
-      <div id="dropZone">画像をドロップ<br>またはクリックして選択</div>
+      <h2>入力</h2>
       <input type="file" id="fileInput" accept="image/*" hidden>
       <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="depthFileInput" accept="image/*" hidden>
-      <div class="row mobileActions">
-        <button id="btnCamera" class="primary">撮影して深度生成</button>
-        <button id="btnPhoto">写真から深度生成</button>
-      </div>
+
+      <h3 class="method">① ハイトマップから</h3>
+      <div id="dropZone">画像をドロップ<br>またはクリックして選択</div>
+      <button id="btnHeight" class="fullBtn mobileOnly">ハイトマップ画像を選択</button>
+      <div class="hint">白いほど高い「高さ画像」をそのまま使います。</div>
+
+      <h3 class="method">② 写真から（深度推定）</h3>
       <div class="row">
-        <button id="btnSample">サンプル地形を生成</button>
-        <button id="btnDepth">画像から深度推定</button>
+        <button id="btnCamera" class="primary mobileOnly">撮影して深度生成</button>
+        <button id="btnPhoto" class="fullBtn">写真を選んで深度生成</button>
       </div>
+      <div class="hint">普通の写真から AI が奥行きを推定してハイトマップにします。</div>
+
+      <button id="btnSample" class="fullBtn sampleBtn">サンプル地形で試す</button>
+
       <canvas id="thumb" width="220" height="220"></canvas>
       <div class="row">
         <label>解像度
@@ -76,7 +82,6 @@
           <option value="1">ハイトマップ</option>
           <option value="2">コーンマップ</option>
           <option value="3">レイマーチ回数</option>
-          <option value="4">シェーディング無し</option>
         </select>
       </label>
       <div class="heatLegend" aria-label="レイマーチ回数ヒートマップ凡例">
@@ -96,8 +101,9 @@
         <label><input type="checkbox" id="chkShadow" checked> セルフシャドウ</label>
         <label><input type="checkbox" id="chkSpecular" checked> スペキュラー</label>
         <label><input type="checkbox" id="chkAutoLight" checked> ライト自動回転</label>
+        <label><input type="checkbox" id="chkNoShading"> シェーディング無し</label>
       </div>
-      <button id="btnTilt" class="sensorButton">傾き操作を有効化</button>
+      <button id="btnTilt" class="sensorButton mobileOnly">傾き操作を有効化</button>
       <label class="slider">ライト方位 <span id="lblLightAz">45</span>°
         <input type="range" id="rngLightAz" min="0" max="360" value="45">
       </label>

@@ -8,6 +8,9 @@ main{flex:1;display:flex;min-height:0}
 #panel{width:330px;overflow-y:auto;padding:12px;background:#191c21;border-right:1px solid #2a2e36;flex-shrink:0}
 section{margin-bottom:18px}
 h2{font-size:13px;color:#9fb6d8;margin:0 0 8px;border-bottom:1px solid #2a2e36;padding-bottom:4px}
+h3.method{font-size:12px;color:#cfe1ff;margin:12px 0 6px;font-weight:600}
+.fullBtn{display:block;width:100%;margin-top:6px}
+.sampleBtn{margin-top:10px;opacity:.85}
 #view{flex:1;position:relative;min-width:0}
 #glcanvas{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none}
 #dropZone{border:2px dashed #3a4150;border-radius:8px;padding:18px;text-align:center;color:#8a93a2;cursor:pointer;font-size:12px}
@@ -37,6 +40,7 @@ progress{width:100%;height:8px;margin-top:8px}
 #btnCopyMaterial{width:100%;margin-top:10px}
 #glError{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;text-align:center;color:#e08a8a;font-size:14px}
 #glError[hidden]{display:none}
+.mobileOnly{display:none}
 @media (max-width:700px){
   body{overflow:auto}
   header{padding:8px 12px}
@@ -51,6 +55,7 @@ progress{width:100%;height:8px;margin-top:8px}
   .mobileActions{position:sticky;top:0;z-index:10;padding:6px 0;background:#191c21}
   .mobileActions button{min-height:44px}
   .desktopOnly{display:none}
+  .mobileOnly{display:block}
 }
 
 /* ===== スマホ専用フルスクリーンビュワー ===== */
