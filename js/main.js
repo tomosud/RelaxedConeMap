@@ -174,8 +174,8 @@ function finishUI(aborted){
   $("btnSave").disabled = false;
   $("prog").value = aborted ? generator.progress : 1;
   $("status").textContent = aborted
-    ? `中止しました (${generator.elapsed.toFixed(1)} 秒)`
-    : `完了 (${generator.elapsed.toFixed(1)} 秒)`;
+    ? `Canceled (${generator.elapsed.toFixed(1)} sec)`
+    : `Done (${generator.elapsed.toFixed(1)} sec)`;
 }
 
 // ---------- PNG 保存 ----------
@@ -211,8 +211,8 @@ function openMaterialPage(text){
     .replace(/</g, "\\u003c")
     .replace(/>/g, "\\u003e");
   const html =
-    "<!DOCTYPE html><html lang=\"ja\"><head><meta charset=\"utf-8\">" +
-    "<title>Unreal マテリアル テキスト</title>" +
+    "<!DOCTYPE html><html lang=\"en\"><head><meta charset=\"utf-8\">" +
+    "<title>Unreal Material Text</title>" +
     "<style>body{margin:0;background:#15171c;color:#e2e6ee;font-family:system-ui,sans-serif}" +
     "header{position:sticky;top:0;background:#1d2027;padding:12px 16px;border-bottom:1px solid #2a2e36;display:flex;gap:12px;align-items:center;flex-wrap:wrap}" +
     "h1{font-size:14px;margin:0;font-weight:600}" +
@@ -222,14 +222,14 @@ function openMaterialPage(text){
     "textarea{display:block;width:100%;height:calc(100vh - 70px);box-sizing:border-box;border:0;padding:14px 16px;" +
     "background:#15171c;color:#cdd3dd;font-family:ui-monospace,Consolas,monospace;font-size:12px;line-height:1.5;resize:none;white-space:pre;overflow:auto}" +
     "</style></head><body>" +
-    "<header><h1>Unreal マテリアル テキスト</h1>" +
-    "<button id=\"sel\">全選択してコピー</button>" +
-    "<p>下のテキストを Unreal のマテリアルエディタに Ctrl+V で貼り付けてください。</p></header>" +
+    "<header><h1>Unreal Material Text</h1>" +
+    "<button id=\"sel\">Select All and Copy</button>" +
+    "<p>Paste the text below into Unreal's Material Editor with Ctrl+V.</p></header>" +
     "<textarea id=\"ta\" readonly spellcheck=\"false\"></textarea>" +
     "<script>var ta=document.getElementById('ta');" +
     "ta.value=" + json + ";" +
     "document.getElementById('sel').onclick=function(){ta.focus();ta.select();" +
-    "try{document.execCommand('copy');this.textContent='コピーしました';}catch(e){this.textContent='手動でコピーしてください';}};" +
+    "try{document.execCommand('copy');this.textContent='Copied';}catch(e){this.textContent='Copy Manually';}};" +
     "ta.focus();ta.select();<\/script>" +
     "</body></html>";
   const blob = new Blob([html], { type: "text/html;charset=utf-8" });
@@ -251,15 +251,15 @@ async function copyUnrealMaterial(){
       unrealMaterialText = text;
     }
     if(!text || !text.trim()){
-      throw new Error("material.txt が空です。ファイルの内容を確認してください。");
+      throw new Error("material.txt is empty. Please check the file contents.");
     }
     const opened = openMaterialPage(text);
-    if(!opened) throw new Error("ポップアップがブロックされました。ポップアップを許可してください。");
-    $("status").textContent = "別ページに Unreal マテリアルのテキストを表示しました。全選択してコピーしてください。";
+    if(!opened) throw new Error("The popup was blocked. Please allow popups and try again.");
+    $("status").textContent = "Opened the Unreal material text on a separate page. Select all and copy it.";
   } catch(err) {
-    btn.textContent = "表示に失敗しました";
-    $("status").textContent = "Unreal マテリアルの表示に失敗しました: " + (err.message || String(err));
-    setTimeout(() => { btn.textContent = "Unreal マテリアルのテキストを開く"; }, 2500);
+    btn.textContent = "Failed to Open";
+    $("status").textContent = "Failed to open the Unreal material text: " + (err.message || String(err));
+    setTimeout(() => { btn.textContent = "Open Unreal Material Text"; }, 2500);
   }
 }
 
