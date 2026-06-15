@@ -278,30 +278,30 @@ function updateHeatTicks(){
 
 function bindTooltips(){
   const tips = {
-    dropZone: "入力するハイトマップ画像を読み込みます。白に近いほど高く、黒に近いほど低い地形として扱います。",
-    btnCamera: "iPhone やスマホのカメラで撮影し、その写真から深度とコーンマップを続けて生成します。",
-    btnPhoto: "端末内の写真を選び、その写真から深度とコーンマップを続けて生成します。",
-    btnSample: "動作確認用のサンプルハイトマップを生成し、そのままコーンマップ生成を開始します。",
-    btnHeight: "ハイトマップ画像を選んで読み込みます。白に近いほど高く、黒に近いほど低い地形として扱います。",
-    selSize: "生成するコーンマップ PNG の一辺の解像度です。大きいほど細かくなりますが、生成時間とメモリ使用量が増えます。",
-    selChannel: "入力画像のどのチャンネルを高さとして使うかを選びます。通常は輝度で、専用画像なら R/G/B/A を指定します。",
-    chkInvert: "高さを反転します。黒が高く白が低い画像を使う場合に ON にします。",
-    chkWrap: "画像端をまたいで繰り返し接続します。タイル素材として使う場合は ON、単発画像なら OFF が向いています。",
-    rngRadius: "コーンマップ生成時に、各ピクセルから周囲を何ピクセル先まで調べるかです。大きいほど遠くの遮蔽まで考慮しますが、生成が重くなります。",
-    rngSteps: "コーンマップ生成時の検査レイを何分割してサンプルするかです。多いほどコーン比率の精度が上がりますが、生成時間が増えます。",
-    btnGen: "現在の入力画像と設定で、Relaxed Cone Step Mapping 用のコーンマップを GPU で再生成します。",
-    btnSave: "生成済みの PNG を保存します。R に高さ、G にコーン比率が入ります。",
-    selMode: "プレビューの表示内容を切り替えます。レリーフ表示、元の高さ、コーン比率、レイマーチ回数の確認に使います。",
-    rngDepth: "プレビュー上で高さをどれくらい深く見せるかです。大きいほど凹凸が強くなりますが、破綻も目立ちやすくなります。",
-    rngTile: "プレビュー面に同じハイトマップを何回繰り返して貼るかです。タイル継ぎ目や繰り返しパターンの確認に使います。",
-    rngConeSteps: "プレビュー描画時の Relaxed Cone Stepping の最大反復回数です。足りないと交点探索が途中で止まりやすく、多いほど重くなります。レイマーチ回数表示の色は 32 回で最大色に飽和します。",
-    chkShadow: "プレビューに簡易セルフシャドウを追加します。形状の見え方は確認しやすくなりますが、描画負荷は少し増えます。",
-    chkSpecular: "ライトによる光沢ハイライトを表示します。元画像カラーの確認を優先したい場合は OFF にします。",
-    chkAutoLight: "ライトの方位角を自動で回転させます。凹凸や影の出方を連続的に確認したい時に使います。",
-    btnTilt: "スマホの傾きセンサーでプレビューの視点を動かします。iOS Safari ではタップ後に許可が必要です。",
-    chkNoShading: "ライトによる陰影を使わず、表面色をそのまま表示します。元画像のカラーを確認したいときに ON にします。",
-    rngLightAz: "ライトの水平角度です。影やハイライトが左右どちらから入るかを調整します。",
-    rngLightEl: "ライトの仰角です。低いほど影が長く、高いほど正面から照らした見た目になります。"
+    dropZone: "Load a height map image. Brighter pixels are treated as higher terrain and darker pixels as lower terrain.",
+    btnCamera: "Take a photo with your phone camera, then generate depth and a cone map from it.",
+    btnPhoto: "Choose a photo from this device, then generate depth and a cone map from it.",
+    btnSample: "Create a sample height map and immediately start cone map generation.",
+    btnHeight: "Choose and load a height map image. Brighter pixels are treated as higher terrain and darker pixels as lower terrain.",
+    selSize: "The output cone map PNG resolution. Larger values add detail, generation time, and memory use.",
+    selChannel: "Choose which input image channel is used as height. Luminance is usually best; use R/G/B/A for dedicated source maps.",
+    chkInvert: "Invert the height values. Enable this when black is high and white is low.",
+    chkWrap: "Connect opposite image edges for repeatable tiling. Enable for tile materials, or disable for one-off images.",
+    rngRadius: "How many pixels around each source pixel to inspect when generating the cone map. Larger values account for farther occluders but take longer.",
+    rngSteps: "How many samples to use along each test ray during cone map generation. Higher values improve cone ratio accuracy but take longer.",
+    btnGen: "Regenerate the Relaxed Cone Step Mapping cone map on the GPU using the current input and settings.",
+    btnSave: "Save the generated PNG. R stores height and G stores cone ratio.",
+    selMode: "Switch the preview between relief display, source height, cone ratio, and raymarch iteration count.",
+    rngDepth: "Controls how deep the height appears in the preview. Higher values make the relief stronger but can show artifacts sooner.",
+    rngTile: "How many times to repeat the height map across the preview surface. Use this to inspect tile seams and repeated patterns.",
+    rngConeSteps: "Maximum Relaxed Cone Stepping iterations for the preview. Too few can stop intersection search early; more is heavier. Iteration colors saturate at 32.",
+    chkShadow: "Adds simple self-shadowing to the preview. It makes the shape easier to read with a small rendering cost.",
+    chkSpecular: "Shows light-driven specular highlights. Disable when you want to prioritize checking the source color.",
+    chkAutoLight: "Automatically rotates the light azimuth to inspect relief and shadow changes continuously.",
+    btnTilt: "Move the preview viewpoint using the phone tilt sensor. iOS Safari requires permission after tapping.",
+    chkNoShading: "Shows surface color without lighting. Enable when you want to inspect the original image color.",
+    rngLightAz: "Horizontal light angle. Adjusts whether shadows and highlights come from the left or right.",
+    rngLightEl: "Light elevation. Lower values produce longer shadows; higher values look more front-lit."
   };
   for(const [id, text] of Object.entries(tips)){
     const el = $(id);
@@ -312,7 +312,7 @@ function bindTooltips(){
   }
   const heatLegend = document.querySelector(".heatLegend");
   if(heatLegend){
-    const text = "レイマーチ回数ヒートマップの凡例です。色は絶対回数で、0 回から 32 回までを表示し、32 回以上は最大色として扱います。";
+    const text = "Legend for the raymarch iteration heat map. Colors show absolute counts from 0 to 32; 32 or more uses the maximum color.";
     heatLegend.classList.add("hasTip");
     heatLegend.dataset.tip = text;
   }
@@ -334,37 +334,37 @@ function loadFile(file){
   const url = URL.createObjectURL(file);
   const img = new Image();
   img.onload = () => { srcImage = img; colorImage = null; URL.revokeObjectURL(url); startGenerate(); };
-  img.onerror = () => { URL.revokeObjectURL(url); $("status").textContent = "画像を読み込めませんでした"; };
+  img.onerror = () => { URL.revokeObjectURL(url); $("status").textContent = "Could not load the image."; };
   img.src = url;
 }
 
 async function loadDepthFile(file){
   if(!file || !file.type.startsWith("image/")) return;
   if(!depthEngine){
-    $("status").textContent = "深度推定エンジンを初期化できませんでした";
+    $("status").textContent = "Could not initialize the depth estimation engine.";
     return;
   }
   hideSampleButton();
   if(generator.busy) generator.abort();
   const reader = new FileReader();
-  reader.onerror = () => $("status").textContent = "画像を読み込めませんでした";
+  reader.onerror = () => $("status").textContent = "Could not load the image.";
   reader.onload = async e => {
     try {
       $("btnCamera").disabled = true;
       $("btnPhoto").disabled = true;
       $("btnGen").disabled = true;
       $("btnSave").disabled = true;
-      $("status").textContent = "深度推定モデルを読み込み中...";
+      $("status").textContent = "Loading depth estimation model...";
       await depthEngine.initModel();
-      $("status").textContent = "画像から深度を推定中...";
+      $("status").textContent = "Estimating depth from image...";
       const result = await depthEngine.estimate(e.target.result);
       srcImage = imageDataToCanvas(result.depth.imageData, result.depth.width, result.depth.height);
       colorImage = imageDataToCanvas(result.original.imageData, result.original.width, result.original.height);
       startGenerate();
     } catch(err) {
-      $("status").textContent = "深度推定に失敗しました: " + (err.message || String(err));
+      $("status").textContent = "Depth estimation failed: " + (err.message || String(err));
       const ms = $("mStartStatus");
-      if(ms) ms.textContent = "失敗しました: " + (err.message || String(err));
+      if(ms) ms.textContent = "Failed: " + (err.message || String(err));
       $("btnGen").disabled = false;
     } finally {
       $("btnCamera").disabled = false;
@@ -394,12 +394,12 @@ $("btnPhoto").addEventListener("click", () => $("depthFileInput").click());
 const mStartCamera = $("mStartCamera"), mStartPhoto = $("mStartPhoto");
 if(mStartCamera) mStartCamera.addEventListener("click", () => {
   enableTiltDefault();
-  $("mStartStatus").textContent = "深度を推定中…";
+  $("mStartStatus").textContent = "Estimating depth...";
   $("cameraInput").click();
 });
 if(mStartPhoto) mStartPhoto.addEventListener("click", () => {
   enableTiltDefault();
-  $("mStartStatus").textContent = "深度を推定中…";
+  $("mStartStatus").textContent = "Estimating depth...";
   $("depthFileInput").click();
 });
 
@@ -419,12 +419,12 @@ $("btnTilt").addEventListener("click", async () => {
   try {
     if(viewer.tiltEnabled){
       viewer.resetTiltCenter();
-      $("status").textContent = "現在の向きを基準にしました";
+      $("status").textContent = "Current orientation set as the center.";
       return;
     }
     await viewer.enableTilt();
-    $("btnTilt").textContent = "傾き操作を再センター";
-    $("status").textContent = "傾き操作を有効化しました";
+    $("btnTilt").textContent = "Recenter Tilt Control";
+    $("status").textContent = "Tilt control enabled.";
   } catch(err) {
     $("status").textContent = err.message || String(err);
   }
@@ -433,7 +433,7 @@ for(const id of ["selSize", "selChannel", "chkInvert"]){
   $(id).addEventListener("change", () => {
     if(srcImage && !generator.busy){
       processSource();
-      $("status").textContent = "設定変更 → 「生成」で再計算してください";
+      $("status").textContent = "Settings changed. Click Generate to recalculate.";
     }
   });
 }
@@ -449,7 +449,7 @@ function frame(){
     $("prog").value = generator.progress;
     const el = (now - generator.t0) / 1000;
     $("status").textContent =
-      `生成中… ${(generator.progress * 100).toFixed(0)}% (${el.toFixed(1)} 秒)`;
+      `Generating... ${(generator.progress * 100).toFixed(0)}% (${el.toFixed(1)} sec)`;
   }
   if(genActive && !generator.busy){
     finishUI(generator.progress < 1);

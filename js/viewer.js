@@ -120,11 +120,11 @@ class Viewer {
 
   async enableTilt(){
     if(!("DeviceOrientationEvent" in window)){
-      throw new Error("この端末では傾きセンサーを利用できません。");
+      throw new Error("Tilt sensor is not available on this device.");
     }
     if(typeof DeviceOrientationEvent.requestPermission === "function"){
       const permission = await DeviceOrientationEvent.requestPermission();
-      if(permission !== "granted") throw new Error("傾きセンサーの利用が許可されませんでした。");
+      if(permission !== "granted") throw new Error("Tilt sensor permission was not granted.");
     }
     window.removeEventListener("deviceorientation", this._orientationHandler);
     window.addEventListener("deviceorientation", this._orientationHandler, true);

@@ -39,7 +39,7 @@ class DepthEngine {
       }
     }
 
-    throw lastError || new Error('モデルファイルが見つかりません');
+    throw lastError || new Error('Model file was not found.');
   }
 
   /**
@@ -164,7 +164,7 @@ class DepthEngine {
     // Ensure model is loaded
     const session = await this.initModel();
     if (!session) {
-      throw new Error('モデルの初期化に失敗しました');
+      throw new Error('Model initialization failed.');
     }
 
     return new Promise((resolve, reject) => {
@@ -192,7 +192,7 @@ class DepthEngine {
           // Postprocess
           const depthResult = this.postprocess(output);
           if (!depthResult) {
-            throw new Error('深度画像の生成に失敗しました');
+            throw new Error('Failed to generate the depth image.');
           }
 
           // Return both original and depth data
@@ -218,7 +218,7 @@ class DepthEngine {
       };
 
       img.onerror = () => {
-        reject(new Error('画像の読み込みに失敗しました'));
+        reject(new Error('Failed to load the image.'));
       };
 
       img.src = imageSrc;
