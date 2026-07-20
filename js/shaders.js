@@ -218,8 +218,12 @@ void main(){
       vec3 q = vec3(uv0, 0.0) + dir * mid;
       if(q.z < dAt(q.xy)) lo = mid; else hi = mid;
     }
-    p = vec3(uv0, 0.0) + dir * hi;
+    // Reference Refinement.slang returns the final interval midpoint.
+    p = vec3(uv0, 0.0) + dir * (0.5 * (lo + hi));
   }
+
+  // Do not stretch a clamped border texel beyond the relief rectangle.
+  if(!uWrap && any(notEqual(clamp(p.xy, vec2(0.0), vec2(1.0)), p.xy))) discard;
 
   // --- normal from the refined height-field point ---
   vec2 e = 1.0 / vec2(textureSize(uHeight, 0));

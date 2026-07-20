@@ -1,234 +1,210 @@
-# Robust Cone Step Mapping implementation plan
+# Robust Cone Step Mapping — implementation and conformance plan
 
-This change keeps the existing GPU Gems 3 relaxed-cone implementation intact and adds the EGSR 2024 implementation as a separate selectable pipeline. Unreal Engine material support is explicitly out of scope for this phase.
+This document is the normative contract and audit record for the independent WebGL2 implementation of Bán et al., *Robust Cone Step Mapping* (EGSR 2024). The local upstream snapshot used for comparison is `sample/robust-cone-map-master`. Legacy GPU Gems RCS remains a separate selectable implementation. Unreal integration is deferred; its pseudocode is specified below.
 
-## Phase 1 — Isolate the implementation
+## 1. Current decision
 
-- [x] Add a generation-method selector: `Legacy approximate RCS` / `Robust RCS (EGSR 2024)`.
-- [x] Put robust generation shaders in `js/robust-shaders.js`.
-- [x] Put the robust generator and its render-target lifecycle in `js/robust-generator.js`.
-- [x] Switch generator instances only at the UI/application boundary; do not add robust branches to the legacy generator.
+The Clamp, square, mip-0 path implements the reference falling-edge cone construction, 3×3 conservative correction, cell-max search, and binary refinement. Three correctness defects found during the source audit were fixed:
 
-## Phase 2 — Exact relaxed-cone constraints
+- Robust generation now uses the exact R8 height field exported in PNG. AI R16F depth is quantized first; generation, preview, and export no longer use different height fields.
+- Clamp tracing discards a final UV outside `[0,1]`, matching the reference and preventing border texels from stretching to infinity at grazing angles.
+- Binary refinement returns the final bracket midpoint, matching `Refinement.slang`, rather than the inside endpoint.
+- Cancellation exposes a zero-cone packed texture and disables Save; partial R32F work is never decoded/exported as RGB24.
 
-- [x] Enumerate bilinear cells around every cone apex in increasing Chebyshev-distance bands.
-- [x] Test the four cell heights for a limiting/falling edge as described by Algorithm 2.
-- [x] Update the cone ratio only from limiting cells.
-- [x] Stop once the next band is guaranteed to lie below the current cone.
-- [x] Support both clamped and tiled height maps.
+“Reference-equivalent” in this document means: square texture, Clamp addressing, mip 0, linear data, bilinear sampling, R8 height and G8 exported cone. Wrap is a useful extension, but is not supplied or proven by the upstream implementation.
 
-## Phase 3 — Bilinear interpolation correction
+## 2. Normative data contract
 
-- [x] Run a separate 3x3 minimum-filter pass over generated cone ratios.
-- [x] Use the corrected texture for preview and export.
-- [x] Quantize exported 8-bit cone ratios downward so serialization cannot widen a cone.
+### Exported PNG
 
-## Phase 4 — Robust preview tracing
+| Channel | Meaning | Encoding |
+|---|---|---|
+| R | height, `0` bottom to `1` top | UNORM8 |
+| G | corrected relaxed-cone tangent ratio | UNORM8, truncated downward |
+| B | reserved | 0 |
+| A | opaque | 255 |
 
-- [x] Add cell-max stepping to the WebGL preview.
-- [x] Select legacy or cell-max tracing independently of the stored cone texture implementation.
-- [x] Preserve the existing binary root refinement.
+The PNG must be imported as linear data: sRGB disabled, no color transform, bilinear filter, mip 0. Addressing must equal generation. Ordinary image mips are not conservative and are unsupported.
 
-## Phase 5 — Integration and validation
+The robust generator deliberately computes from the already quantized R8 height canvas. This makes the generated guarantee apply to the saved R channel. Cone export uses `floor(c*255)/255`, never nearest rounding.
 
-- [x] Adapt controls and help text when the selected generation method changes.
-- [x] Keep cancellation, progress, preview, and PNG export working for both generators.
-- [ ] Add deterministic impulse/ridge regression fixtures (browser smoke validation is complete).
-- [x] Run syntax checks and a browser smoke test.
-- [x] Document algorithm, output guarantees, performance expectations, and attribution.
+### Internal WebGL representation
 
-## Deferred
+- Raw cone: `R32F`, ping-pong during generation.
+- Corrected cone: conservative value packed into RGB8 as a 24-bit unsigned integer using downward truncation.
+- Preview manually decodes four packed texels and bilinearly interpolates them. Decode is linear, so it preserves the intended bilinear cone value apart from the conservative 24-bit truncation.
+- The RGB24 format is internal only; it is not the PNG contract.
 
-- Unreal Engine material/custom-node implementation.
-- Performance comparison against the Falcor reference application.
+### Geometry and coordinates
 
-## Unreal Engine implementation pseudocode
+- Only square processed maps are accepted; the UI resamples every input to `N×N`.
+- Texel coordinates are centers: `(ij + 0.5) / N`.
+- `height=1` is the front/top surface; tracing depth is `1-height`, with `t=0` at the front plate and `t=1` at the back plate.
+- Depth/relief scale affects the view ray, not preprocessing cone ratios.
 
-This section is for the later Unreal Material Custom-node implementation. It consumes the exported PNG, not the WebGL-only internal RGB packing.
+## 3. Reference-to-implementation mapping
 
-### Texture contract
+| Upstream source | Local implementation | Status / intentional difference |
+|---|---|---|
+| `Conemap.cs.slang::main_new_fallingEdge` | `RobustConeMapGenerator._makeCells`, `ROBUST_SHADERS.generateFS` | Same four outward directions and Chebyshev bands. WebGL batches a global cell list. |
+| `updateMinTan` | `generateFS` candidate loop | Same distance, height, existing-cone rejects and four-height falling-edge predicate. |
+| `WriteConeMap` | `correctFS`, `exportFS` | No sqrt lookup. Downward quantization. Internal 24-bit; export 8-bit. |
+| `main_postprocess_max` | `correctFS` | Same 3×3 minimum; Clamp path clamps neighbor indices. |
+| `FindIntersection.slang::findIntersection_coneStepMapping` | `SHADERS.viewFS` robust branch | Algebraically equivalent depth-normalized cone step plus cell-max boundary step. |
+| `Refinement.slang::refineIntersection_binarySearch` | `viewFS` eight-step binary loop | Uses last outside/current inside bracket and returns final midpoint. |
+| `Parallax.ps.slang` final bounds check | `viewFS` Clamp discard | Outside final UV is discarded; Wrap remains periodic. |
 
-```text
-R = height [0,1], where 1 is the highest surface
-G = corrected relaxed-cone ratio [0,1]
-B = unused
-A = 1
-```
+The upstream per-apex loop can break an entire band. The batched WebGL implementation still submits all bands and rejects individual candidates with the same cone bound. This is correctness-equivalent but slower; the former plan’s claim that generation stopped at a band was inaccurate.
 
-Recommended Unreal texture settings:
+## 4. Implemented phases
 
-- Disable sRGB and use a linear-data/mask compression mode.
-- Use bilinear filtering.
-- Addressing must match generation: Wrap for tiled maps, Clamp otherwise.
-- Initially force mip 0. Ordinary image mips do not preserve robust cone guarantees.
-- Sample height and cone together so both values use identical UV/filtering.
+- [x] Keep Legacy and Robust generators separate; select only at the application boundary.
+- [x] Exact falling-edge candidate test for the Clamp square path.
+- [x] Conservative 3×3 bilinear interpolation correction.
+- [x] Downward 24-bit internal and 8-bit export quantization.
+- [x] Same R8 height field for robust generation, preview, and export.
+- [x] Cell-max robust tracing and valid last-outside/current-inside refinement bracket.
+- [x] Reference midpoint refinement and Clamp final-UV discard.
+- [x] Safe cancellation: no partial preview/export and Save remains disabled.
+- [x] Debug statistics for raw/corrected cone and magenta iteration-cap misses.
+- [x] Photo drag/drop and image paste thumbnail workflow; direct height input remains separate.
 
-Suggested Custom-node inputs:
+## 5. Extensions and limits
 
-```text
-Texture2D ConeMap
-SamplerState ConeMapSampler
-float2 UV
-float3 ViewTS          // pixel-to-camera direction in tangent space
-float DepthScale
-float2 TextureSize     // mip-0 width and height
-int MaxConeSteps
-int BinarySteps
-```
+- Wrap generation/tracing is an independent periodic extension. It is not claimed as upstream conformance until a toroidal CPU oracle and seam fixtures pass.
+- Only square mip-0 textures are supported. Conservative mip generation is future work.
+- `EXT_color_buffer_float` is required for raw R32F accumulation. Unsupported devices currently fail initialization instead of silently falling back.
+- A plane-based parallax method cannot create a true displaced silhouette or side wall. Very shallow views can still reveal finite-step and sampling limits, but Clamp border smearing is now removed.
+- The fixed shader batch (`ivec4[128]`) fits the WebGL2 minimum fragment-uniform requirement, but adaptive sizing from `MAX_FRAGMENT_UNIFORM_VECTORS` remains a portability improvement.
+- Robust generation enumerates every global candidate batch; it prioritizes auditability over the reference compute shader’s per-apex early termination performance.
 
-Return the corrected UV. A debug version should also expose hit, intersection depth, and iteration count.
+## 6. Validation matrix
 
-### Cell-max robust tracing
+### Completed smoke checks
+
+- [x] JavaScript syntax and `git diff --check`.
+- [x] Chromium GLSL compilation and 512×512 generation for Clamp and Wrap.
+- [x] Raw/corrected readback contains finite values and no invalid values.
+- [x] Visual cone, height, relief, and iteration debug modes.
+
+### Required conformance tests
+
+These remain explicit acceptance work; smoke tests are not presented as a mathematical proof.
+
+- [ ] CPU port of upstream Algorithm 2 versus GPU raw texels on flat, impulse, X/Y/diagonal ridge, saddle, monotone ramp, checker, and seeded random maps.
+- [ ] 3×3 corrected result versus a CPU boundary-aware minimum oracle.
+- [ ] PNG round trip: exported R equals generation R8 height, and exported G never exceeds the corrected internal cone.
+- [ ] Dense/exact bilinear root oracle over random rays: no robust step skips the first intersection.
+- [ ] Clamp ray-exit, vertical, axis-aligned, grazing, iteration-cap, and non-hit fixtures.
+- [ ] Wrap seam/toroidal oracle before describing Wrap as proven robust.
+- [ ] Abort, WebGL context loss, missing extension, every UI resolution, and Legacy non-regression.
+- [ ] Golden comparison with upstream Falcor output where a reproducible fixture/configuration is available.
+
+## 7. Unreal Engine pseudocode (deferred implementation)
+
+The function returns UV, hit state, intersection depth, and iteration count. A UV-only function cannot correctly define miss handling or Pixel Depth Offset.
 
 ```hlsl
-float2 RobustConeStepUV(
-    Texture2D ConeMap, SamplerState ConeMapSampler,
-    float2 UV, float3 ViewTS, float DepthScale,
-    float2 TextureSize, int MaxConeSteps, int BinarySteps)
+struct RobustHit
 {
-    const float VZ_EPS = 1e-4;
+    float2 UV;
+    float T;
+    float Hit;
+    float Iterations;
+};
+
+RobustHit TraceRobustCone(
+    Texture2D ConeMap, SamplerState ConeSampler,
+    float2 UV, float3 PixelToCameraTS,
+    float DepthScale, float2 TextureSize,
+    int MaxConeSteps, int BinarySteps,
+    bool WrapAddress)
+{
     const float DIR_EPS = 1e-8;
-    const float STEP_EPS = 1e-5;
-    const float HIT_EPS = 1e-5;
+    const float VIEW_EPS = 1e-5;
+    const float CELL_EPS = 1e-5;
+    RobustHit result = { UV, 0, 0, 0 };
 
-    // t=0 at the height-volume top; t=1 at its bottom.
-    // ViewTS points pixel -> camera, so reverse its XY projection.
-    float vz = max(ViewTS.z, VZ_EPS);
-    float2 rayUVPerDepth = -(ViewTS.xy / vz) * abs(DepthScale);
-    float rayRatio = length(rayUVPerDepth);
+    // Contract: tangent +Z points out of the surface, PixelToCameraTS points
+    // from the pixel to camera, and DepthScale must be positive.
+    if (PixelToCameraTS.z <= VIEW_EPS || DepthScale <= 0) return result;
 
-    float t = 0.0;
-    float previousT = 0.0;
+    float2 ray = -(PixelToCameraTS.xy / PixelToCameraTS.z) * DepthScale;
+    float rayRatio = length(ray);
+    float t = 0;
+    float previousT = 0;
     bool hit = false;
+    int count = 0;
 
-    [loop]
-    for (int iteration = 0; iteration < MaxConeSteps; ++iteration)
+    [loop] for (int i = 0; i < MaxConeSteps; ++i)
     {
-        float2 sampleUV = UV + rayUVPerDepth * t;
+        float2 sampleUV = UV + ray * t;
+        if (!WrapAddress && any(sampleUV < 0) || any(sampleUV > 1)) break;
 
-        // Robust generation already baked the 3x3 minimum correction.
-        float2 hc = Texture2DSampleLevel(
-            ConeMap, ConeMapSampler, sampleUV, 0).rg;
-
-        float surfaceDepth = 1.0 - saturate(hc.r);
+        float2 hc = ConeMap.SampleLevel(ConeSampler, sampleUV, 0).rg;
+        float surfaceDepth = 1 - saturate(hc.r);
         float gap = surfaceDepth - t;
-        if (gap <= HIT_EPS) { hit = true; break; }
+        if (gap <= 0) { hit = true; break; } // establishes inside endpoint
 
-        float coneRatio = max(hc.g, 1e-7);
-        float coneStep = coneRatio * gap /
-            max(rayRatio + coneRatio, DIR_EPS);
+        float cone = max(hc.g, 1e-7);
+        float coneStep = cone * gap / max(rayRatio + cone, DIR_EPS);
 
-        // Texel centers define the secondary bilinear-cell grid.
-        float2 cellCenter =
-            (floor(sampleUV * TextureSize - 0.5) + 1.0) / TextureSize;
-        float2 wall = cellCenter +
-            sign(rayUVPerDepth) * 0.5 / TextureSize;
-
-        float2 wallDistance = float2(1e20, 1e20);
-        if (abs(rayUVPerDepth.x) > DIR_EPS)
-        {
-            float tx = (wall.x - sampleUV.x) / rayUVPerDepth.x;
-            if (tx > 0.0) wallDistance.x = tx;
+        float2 center = (floor(sampleUV * TextureSize - 0.5) + 1) / TextureSize;
+        float2 wall = center + float2(ray.x < 0 ? -1 : 1,
+                                     ray.y < 0 ? -1 : 1) * 0.5 / TextureSize;
+        float2 wallStep = 1e20.xx;
+        if (abs(ray.x) > DIR_EPS) {
+            float tx = (wall.x - sampleUV.x) / ray.x;
+            if (tx > 0) wallStep.x = tx;
         }
-        if (abs(rayUVPerDepth.y) > DIR_EPS)
-        {
-            float ty = (wall.y - sampleUV.y) / rayUVPerDepth.y;
-            if (ty > 0.0) wallDistance.y = ty;
+        if (abs(ray.y) > DIR_EPS) {
+            float ty = (wall.y - sampleUV.y) / ray.y;
+            if (ty > 0) wallStep.y = ty;
         }
-
-        float cellStep = min(wallDistance.x, wallDistance.y);
-        float stepT = coneStep;
-        if (cellStep < 1e19)
-            stepT = max(coneStep, cellStep + STEP_EPS);
 
         previousT = t;
-        t = min(t + stepT, 1.0);
-        if (t >= 1.0) break;
+        t += max(coneStep, min(wallStep.x, wallStep.y) + CELL_EPS);
+        count = i + 1;
+        if (t >= 1) {
+            t = 1;
+            float2 endHC = ConeMap.SampleLevel(ConeSampler, UV + ray, 0).rg;
+            hit = t >= 1 - endHC.r;
+            break;
+        }
     }
 
-    // Only refine a genuinely bracketed intersection. Reaching the iteration
-    // cap while still outside the height field is not a hit.
-    float2 endUV = UV + rayUVPerDepth * t;
-    float endSurfaceDepth = 1.0 - Texture2DSampleLevel(
-        ConeMap, ConeMapSampler, endUV, 0).r;
-    hit = hit || (t >= endSurfaceDepth);
-    if (!hit) return endUV;
+    float2 finalUV = UV + ray * t;
+    if (!hit || (!WrapAddress && any(finalUV < 0) || any(finalUV > 1))) {
+        result.UV = finalUV; result.T = t; result.Iterations = count;
+        return result; // material chooses clip/fallback/debug magenta
+    }
 
-    float lo = previousT; // outside/above
-    float hi = t;         // inside/on surface
-
-    [loop]
-    for (int refinement = 0; refinement < BinarySteps; ++refinement)
-    {
+    float lo = previousT; // outside
+    float hi = t;         // inside
+    [loop] for (int j = 0; j < BinarySteps; ++j) {
         float mid = 0.5 * (lo + hi);
-        float2 midUV = UV + rayUVPerDepth * mid;
-        float midSurfaceDepth = 1.0 - Texture2DSampleLevel(
-            ConeMap, ConeMapSampler, midUV, 0).r;
-        if (mid < midSurfaceDepth) lo = mid;
-        else                       hi = mid;
+        float h = ConeMap.SampleLevel(ConeSampler, UV + ray * mid, 0).r;
+        if (mid < 1 - h) lo = mid; else hi = mid;
     }
 
-    return UV + rayUVPerDepth * hi;
+    result.T = 0.5 * (lo + hi); // reference midpoint
+    result.UV = UV + ray * result.T;
+    result.Hit = 1;
+    result.Iterations = count;
+    return result;
 }
 ```
 
-### Material connection outline
+Unreal import/usage requirements:
 
-```text
-CameraVectorWS
-  -> TransformVector(World to Tangent)
-  -> RobustConeStepUV Custom node
-  -> corrected UV
-      -> Base Color / Normal / ORM texture samples
-      -> optional Pixel Depth Offset
-```
+1. Use a Texture Object plus explicit Sampler State; disable sRGB and lossy color compression that changes R/G data.
+2. Force mip 0 until conservative mips exist. Virtual Textures are unsupported by this pseudocode.
+3. Match Clamp/Wrap exactly. For Clamp, feed `Hit` to Clip or use an explicit fallback; never shade an out-of-range clamped UV.
+4. Respect Unreal’s tangent basis and material UV V orientation. Validate mirrored UVs and non-uniform object scale with fixtures.
+5. Sample height and cone together from the same texture/filter operation.
+6. Pixel Depth Offset requires converting `result.T * DepthScale` through the actual tangent/world/view geometry; do not connect `T` directly.
+7. Provide debug modes: cone grayscale, iteration count, hit green/miss magenta, cell coordinates, and cone-step versus cell-step.
 
-Implementation requirements:
+## 8. Audit record
 
-1. Keep `surfaceDepth = 1 - height` consistent with generation.
-2. Texture addressing must match the generator's Tiling option.
-3. Sample cone data as linear data, never through sRGB conversion.
-4. Cell-max uses the cone-map resolution, not screen resolution.
-5. Do not repeat the 3x3 correction in the material; it is already baked.
-6. Do not clamp cone ratios to the legacy `0.002`; use only a tiny progress guard such as `1e-7`.
-7. Regular auto-generated mips are unsafe. Conservative mips need a separate generation/validation design.
-
-### Temporary Unreal debug outputs
-
-```text
-Debug 0: corrected UV
-Debug 1: sampled cone ratio as grayscale
-Debug 2: iterationCount / MaxConeSteps
-Debug 3: hit = green, iteration-cap miss = magenta
-Debug 4: frac(sampleUV * TextureSize), showing cell position
-Debug 5: abs(coneStep - cellStep), showing cell-max-limited areas
-```
-
-Validation maps should include a one-texel impulse, thin X/Y/diagonal ridges, a clamped non-tiled boundary, and a tiled map with exactly matching opposite edges.
-## Current correctness status
-
-Reviewed against the EGSR 2024 reference `FindIntersection.slang`, `Refinement.slang`, and `Conemap.cs.slang`.
-
-Fixed in the WebGL tracer:
-
-- Binary refinement now uses only `previousT -> currentT`, the last outside-to-inside interval. The previous implementation incorrectly refined `0 -> currentT`, which can contain multiple roots for relaxed cones.
-- The tracer records whether it actually entered the height field. Iteration-cap misses are no longer passed to binary refinement.
-- The `0.001` proximity termination was removed; proximity without an inside sample does not establish a valid root bracket.
-- Iteration debug mode displays non-hits in magenta.
-- Preview height, cone, and color samplers now follow the generator's Wrap/Clamp setting.
-- The manually decoded 24-bit cone texture now clamps coordinates when Wrap is disabled instead of always applying `fract`.
-- Photo/depth-estimation inputs disable Wrap by default because their opposite edges are not generally continuous.
-
-Validated:
-
-- JavaScript syntax and `git diff --check` pass.
-- Chromium compiles the updated GLSL without shader errors.
-- Robust 512x512 generation completes with both Wrap and Clamp paths.
-- GPU cone statistics remain finite with zero invalid values.
-
-Remaining representation limits, not cone-map correctness bugs:
-
-- A planar parallax method cannot create a true displaced silhouette or side wall.
-- Very shallow view angles can produce large UV displacement and stretching even with a correct intersection.
-- Non-tile images must use Clamp; enabling Wrap intentionally allows rays to continue on the opposite edge.
-- A low Cone Steps cap can still miss; the iteration debug view marks these pixels magenta.
+2026-07-21: compared local WebGL code with upstream `Conemap.cs.slang`, `FindIntersection.slang`, `Refinement.slang`, and `Parallax.ps.slang`. Three independent reviews covered generator math/data format, tracer/refinement, and plan/test/Unreal completeness. The fixes listed in §1 were applied. Remaining unchecked items are clearly separated from completed implementation claims above.

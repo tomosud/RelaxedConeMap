@@ -40,16 +40,15 @@ class RobustConeMapGenerator {
   setHeight(source, maxHeight, wrap){
     const gl = this.gl;
     const canvas = source.canvas || source;
-    const heightData = source.heightData || null;
     const n = canvas.width;
-    const kind = heightData ? "r16f" : "rgba8";
+    // Generate from the same R8 height field stored in the exported PNG.
+    // Using R16F AI depth here and R8 on export would invalidate the guarantee.
+    const kind = "rgba8";
     this.wrap = !!wrap;
     if(n !== this.size || kind !== this.heightTexKind){
       [this.heightTex, ...this.ping, this.correctedTex, this.exportTex].forEach(t => t && gl.deleteTexture(t));
       [...this.fbo, this.correctedFbo, this.exportFbo].forEach(f => f && gl.deleteFramebuffer(f));
-      this.heightTex = heightData
-        ? makeTex(gl, n, n, { internalFormat: gl.R16F, format: gl.RED, type: gl.HALF_FLOAT })
-        : makeTex(gl, n, n);
+      this.heightTex = makeTex(gl, n, n);
       this.ping = [0, 1].map(() => makeTex(gl, n, n, { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT }));
       this.fbo = this.ping.map(makeFBO.bind(null, gl));
       this.correctedTex = makeTex(gl, n, n);
@@ -60,14 +59,9 @@ class RobustConeMapGenerator {
       this.heightTexKind = kind;
     }
     gl.bindTexture(gl.TEXTURE_2D, this.heightTex);
-    if(heightData){
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.R16F, n, n, 0, gl.RED, gl.HALF_FLOAT, makeHalfFloatHeight(heightData, n));
-    } else {
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
-      gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-      gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
-    }
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
+    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA8, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
+    gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, false);
     this._clearCones();
   }
 
@@ -79,6 +73,11 @@ class RobustConeMapGenerator {
       gl.clearColor(1, 1, 1, 1);
       gl.clear(gl.COLOR_BUFFER_BIT);
     }
+    // Aborted work must not be decoded as a packed robust cone map.
+    gl.bindFramebuffer(gl.FRAMEBUFFER, this.correctedFbo);
+    gl.viewport(0, 0, this.size, this.size);
+    gl.clearColor(0, 0, 0, 1);
+    gl.clear(gl.COLOR_BUFFER_BIT);
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     this.cur = 0;
   }
@@ -162,9 +161,10 @@ class RobustConeMapGenerator {
   abort(){
     if(!this.busy) return;
     this.busy = false;
-    this.done = true;
+    this.done = false;
+    this.phase = "aborted";
     this.elapsed = (performance.now() - this.t0) / 1000;
-    this.debugStats = this._collectDebugStats();
+    this.debugStats = null;
   }
 
 
@@ -226,5 +226,5 @@ class RobustConeMapGenerator {
   }
 
   get progress(){ return this.totalPasses ? this.passIdx / this.totalPasses : 0; }
-  get coneTex(){ return this.phase === "done" ? this.correctedTex : this.ping[this.cur]; }
+  get coneTex(){ return (this.phase === "done" || this.phase === "aborted") ? this.correctedTex : this.ping[this.cur]; }
 }

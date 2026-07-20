@@ -221,7 +221,7 @@ function startGenerate(){
 function finishUI(aborted){
   $("btnGen").disabled = false;
   $("btnAbort").hidden = true;
-  $("btnSave").disabled = false;
+  $("btnSave").disabled = aborted;
   $("prog").value = aborted ? generator.progress : 1;
   $("status").textContent = aborted
     ? `Canceled (${generator.elapsed.toFixed(1)} sec)`
