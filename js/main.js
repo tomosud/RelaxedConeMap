@@ -419,6 +419,7 @@ async function loadDepthFile(file){
       colorImage = imageDataToCanvas(result.original.imageData, result.original.width, result.original.height);
       $("chkShadow").checked = false;
       $("chkSpecular").checked = false;
+      $("chkWrap").checked = false; // Photos/depth estimates are not tileable by default.
       $("chkAutoLight").checked = false;
       $("chkNoShading").checked = true;
       startGenerate();
@@ -539,6 +540,7 @@ function frame(){
     lightAz: (+$("rngLightAz").value + autoLightT) % 360,
     lightEl: +$("rngLightEl").value,
     robust: generator === generators.robust,
+    wrap: !!generator.wrap,
   });
   requestAnimationFrame(frame);
 }

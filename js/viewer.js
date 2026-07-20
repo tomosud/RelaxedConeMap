@@ -52,10 +52,12 @@ class Viewer {
       vp: u("uVP"), height: u("uHeight"), cone: u("uCone"), color: u("uColor"), cam: u("uCam"),
       light: u("uLight"), depth: u("uDepth"), tile: u("uTile"), planeScale: u("uPlaneScale"),
       coneSteps: u("uConeSteps"), shadow: u("uShadow"), useColor: u("uUseColor"),
-      specular: u("uSpecular"), shading: u("uShading"), mode: u("uMode"), robust: u("uRobust"),
+      specular: u("uSpecular"), shading: u("uShading"), mode: u("uMode"), robust: u("uRobust"), wrap: u("uWrap"),
     };
     this.smp = makeSampler(gl, gl.REPEAT, gl.LINEAR);
+    this.clampSmp = makeSampler(gl, gl.CLAMP_TO_EDGE, gl.LINEAR);
     this.coneSmp = makeSampler(gl, gl.REPEAT, gl.NEAREST);
+    this.coneClampSmp = makeSampler(gl, gl.CLAMP_TO_EDGE, gl.NEAREST);
     this.robustConeSmp = makeSampler(gl, gl.REPEAT, gl.LINEAR);
     this.colorTex = null;
     this.hasColor = false;
@@ -261,15 +263,16 @@ class Viewer {
     gl.uniform1i(this.u.shading, P.shading ? 1 : 0);
     gl.uniform1i(this.u.mode, P.mode);
     gl.uniform1i(this.u.robust, P.robust ? 1 : 0);
+    gl.uniform1i(this.u.wrap, P.wrap ? 1 : 0);
     gl.activeTexture(gl.TEXTURE0);
     gl.bindTexture(gl.TEXTURE_2D, heightTex);
-    gl.bindSampler(0, this.smp);
+    gl.bindSampler(0, P.wrap ? this.smp : this.clampSmp);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, coneTex);
-    gl.bindSampler(1, this.coneSmp);
+    gl.bindSampler(1, P.wrap ? this.coneSmp : this.coneClampSmp);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.colorTex || heightTex);
-    gl.bindSampler(2, this.smp);
+    gl.bindSampler(2, P.wrap ? this.smp : this.clampSmp);
     gl.uniform1i(this.u.height, 0);
     gl.uniform1i(this.u.cone, 1);
     gl.uniform1i(this.u.color, 2);

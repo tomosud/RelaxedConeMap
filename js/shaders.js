@@ -109,6 +109,7 @@ uniform bool  uUseColor;
 uniform bool  uSpecular;
 uniform bool  uShading;
 uniform bool  uRobust;
+uniform bool  uWrap;
 uniform int   uMode;        // 0:レリーフ 1:高さ 2:コーン
 in vec3 vWorld;
 in vec2 vUV;
@@ -118,14 +119,18 @@ float hAt(vec2 uv){ return texture(uHeight, uv).r; }
 float dAt(vec2 uv){ return 1.0 - texture(uHeight, uv).r; }
 float robustConeTexel(ivec2 p){
   ivec2 n = textureSize(uCone, 0);
-  p = ivec2((p.x % n.x + n.x) % n.x, (p.y % n.y + n.y) % n.y);
+  if(uWrap)
+    p = ivec2((p.x % n.x + n.x) % n.x, (p.y % n.y + n.y) % n.y);
+  else
+    p = clamp(p, ivec2(0), n - 1);
   vec3 packed = texelFetch(uCone, p, 0).rgb;
   return dot(round(packed * 255.0), vec3(1.0, 256.0, 65536.0)) / 16777215.0;
 }
 float cAt(vec2 uv){
   if(!uRobust) return max(texture(uCone, uv).r, 0.002);
   vec2 size = vec2(textureSize(uCone, 0));
-  vec2 p = fract(uv) * size - 0.5;
+  vec2 coneUV = uWrap ? fract(uv) : clamp(uv, vec2(0.0), vec2(1.0));
+  vec2 p = coneUV * size - 0.5;
   ivec2 i = ivec2(floor(p));
   vec2 f = fract(p);
   float c00 = robustConeTexel(i);
@@ -161,14 +166,18 @@ void main(){
 
   // --- relaxed cone stepping ---
   vec3 p = vec3(uv0, 0.0);
+  float previousT = 0.0;
   int marchCount = 0;
+  bool hit = false;
+
   for(int i = 0; i < 64; i++){
     if(i >= uConeSteps) break;
-    float d = dAt(p.xy);
-    float h = d - p.z;
-    if(h <= 0.001) break;
+    float surfaceDepth = dAt(p.xy);
+    float gap = surfaceDepth - p.z;
+    if(gap <= 0.0){ hit = true; break; }
+
     float c = cAt(p.xy);
-    float stepT = c * h / (rr + c);
+    float stepT = c * gap / (rr + c);
     if(uRobust){
       vec2 size = vec2(textureSize(uHeight, 0));
       vec2 cellCenter = (floor(p.xy * size - 0.5) + 1.0) / size;
@@ -179,28 +188,40 @@ void main(){
       if(abs(dir.y) > 1e-8 && toWall.y > 0.0) cellT = min(cellT, toWall.y);
       if(cellT < 1e19) stepT = max(stepT, cellT + 1e-5);
     }
+
+    previousT = p.z;
     p += dir * stepT;
     marchCount = i + 1;
-    if(p.z >= 1.0) break;
+    if(p.z >= 1.0){
+      p = vec3(uv0, 0.0) + dir;
+      hit = p.z >= dAt(p.xy);
+      break;
+    }
   }
-  if(p.z > 1.0) p += dir * (1.0 - p.z);
+
+  // The final allowed step may have entered the surface.
+  if(!hit) hit = p.z >= dAt(p.xy);
 
   if(uMode == 3){
-    float t = float(marchCount) / 32.0;
-    outColor = vec4(heatColor(t), 1.0);
+    if(!hit){ outColor = vec4(1.0, 0.0, 1.0, 1.0); return; }
+    outColor = vec4(heatColor(float(marchCount) / 32.0), 1.0);
     return;
   }
 
-  // --- 二分探索による交点精密化 (relaxed cone は区間内の交差が高々1回) ---
-  float lo = 0.0, hi = p.z;
-  for(int i = 0; i < 8; i++){
-    float mid = 0.5 * (lo + hi);
-    vec3 q = vec3(uv0, 0.0) + dir * mid;
-    if(q.z < dAt(q.xy)) lo = mid; else hi = mid;
+  // A relaxed-cone step brackets at most one root only between the last
+  // outside point and the current inside point. Never refine from t=0.
+  if(hit){
+    float lo = previousT;
+    float hi = p.z;
+    for(int i = 0; i < 8; i++){
+      float mid = 0.5 * (lo + hi);
+      vec3 q = vec3(uv0, 0.0) + dir * mid;
+      if(q.z < dAt(q.xy)) lo = mid; else hi = mid;
+    }
+    p = vec3(uv0, 0.0) + dir * hi;
   }
-  p = vec3(uv0, 0.0) + dir * hi;
 
-  // --- 法線 (中央差分) ---
+  // --- normal from the refined height-field point ---
   vec2 e = 1.0 / vec2(textureSize(uHeight, 0));
   float hx = hAt(p.xy + vec2(e.x, 0.0)) - hAt(p.xy - vec2(e.x, 0.0));
   float hy = hAt(p.xy + vec2(0.0, e.y)) - hAt(p.xy - vec2(0.0, e.y));

@@ -205,3 +205,30 @@ Debug 5: abs(coneStep - cellStep), showing cell-max-limited areas
 ```
 
 Validation maps should include a one-texel impulse, thin X/Y/diagonal ridges, a clamped non-tiled boundary, and a tiled map with exactly matching opposite edges.
+## Current correctness status
+
+Reviewed against the EGSR 2024 reference `FindIntersection.slang`, `Refinement.slang`, and `Conemap.cs.slang`.
+
+Fixed in the WebGL tracer:
+
+- Binary refinement now uses only `previousT -> currentT`, the last outside-to-inside interval. The previous implementation incorrectly refined `0 -> currentT`, which can contain multiple roots for relaxed cones.
+- The tracer records whether it actually entered the height field. Iteration-cap misses are no longer passed to binary refinement.
+- The `0.001` proximity termination was removed; proximity without an inside sample does not establish a valid root bracket.
+- Iteration debug mode displays non-hits in magenta.
+- Preview height, cone, and color samplers now follow the generator's Wrap/Clamp setting.
+- The manually decoded 24-bit cone texture now clamps coordinates when Wrap is disabled instead of always applying `fract`.
+- Photo/depth-estimation inputs disable Wrap by default because their opposite edges are not generally continuous.
+
+Validated:
+
+- JavaScript syntax and `git diff --check` pass.
+- Chromium compiles the updated GLSL without shader errors.
+- Robust 512x512 generation completes with both Wrap and Clamp paths.
+- GPU cone statistics remain finite with zero invalid values.
+
+Remaining representation limits, not cone-map correctness bugs:
+
+- A planar parallax method cannot create a true displaced silhouette or side wall.
+- Very shallow view angles can produce large UV displacement and stretching even with a correct intersection.
+- Non-tile images must use Clamp; enabling Wrap intentionally allows rays to continue on the opposite edge.
+- A low Cone Steps cap can still miss; the iteration debug view marks these pixels magenta.
