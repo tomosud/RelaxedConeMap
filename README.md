@@ -143,6 +143,19 @@ run_local.bat           Local test server using Python http.server
 - F. Policarpo and M. M. Oliveira, ["Relaxed Cone Stepping for Relief Mapping"](https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-18-relaxed-cone-stepping-relief-mapping), GPU Gems 3, Chapter 18.
 - J. Dummer, "Cone Step Mapping: An Iterative Ray-Heightfield Intersection Algorithm".
 
+
+## Robust Cone Step Mapping (EGSR 2024)
+
+The generation panel provides two independent implementations:
+
+- **Robust RCS (EGSR 2024)** is the default. It evaluates the exact falling-edge constraints over bilinear height-field cells, applies the 3x3 minimum correction required for safe bilinear cone interpolation, traces with cell-max minimum steps, and truncates exported 8-bit cone ratios toward the conservative side.
+- **Legacy approximate RCS** preserves the earlier GPU Gems 3 ray-sampling generator. Search Radius and Ray Search Steps apply only to this mode.
+
+Robust generation intentionally has no search-radius or ray-sampling-quality controls. Its search covers the complete height field and uses the cone bound for early termination. It requires WebGL2 with EXT_color_buffer_float.
+
+The WebGL preview uses bilinear cone sampling and cell-max tracing for robust maps, followed by the existing binary root refinement. Unreal Engine material support still uses the legacy tracer and will be updated separately.
+
+Reference: R. Bﾃ｡n, G. Valasek, Cs. Bﾃ｡lint, and V. A. Vad, [Robust Cone Step Mapping](https://doi.org/10.2312/sr.20241146), EGSR 2024. The reference implementation is available at [Bundas102/robust-cone-map](https://github.com/Bundas102/robust-cone-map).
 ## License
 
 MIT

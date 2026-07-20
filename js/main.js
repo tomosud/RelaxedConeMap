@@ -5,9 +5,13 @@ const canvas = $("glcanvas");
 const gl = canvas.getContext("webgl2", { antialias: true });
 if(!gl){ $("glError").hidden = false; return; }
 
-let generator, viewer;
+let generator, generators, viewer;
 try {
-  generator = new ConeMapGenerator(gl);
+  generators = {
+    legacy: new ConeMapGenerator(gl),
+    robust: new RobustConeMapGenerator(gl),
+  };
+  generator = generators.robust;
   viewer = new Viewer(gl, canvas);
 } catch(err) {
   const e = $("glError");
@@ -198,6 +202,7 @@ function makeSquareCanvas(source, n){
 }
 
 function startGenerate(){
+  generator = generators[$("selGenerator").value];
   if(!srcImage) srcImage = makeSampleHeight(512);
   processSource();
   generator.setHeight(processed, processed.maxH, $("chkWrap").checked);
@@ -332,8 +337,9 @@ function bindTooltips(){
     selChannel: "Choose which input image channel is used as height. Luminance is usually best; use R/G/B/A for dedicated source maps.",
     chkInvert: "Invert the height values. Enable this when black is high and white is low.",
     chkWrap: "Connect opposite image edges for repeatable tiling. Enable for tile materials, or disable for one-off images.",
-    rngRadius: "How many pixels around each source pixel to inspect when generating the cone map. Larger values account for farther occluders but take longer.",
-    rngSteps: "How many samples to use along each test ray during cone map generation. Higher values improve cone ratio accuracy but take longer.",
+    selGenerator: "Robust uses the complete EGSR 2024 pipeline. Legacy preserves the GPU Gems approximation.",
+    rngRadius: "Legacy only: how many surrounding pixels to inspect.",
+    rngSteps: "Legacy only: number of samples along each test ray.",
     btnGen: "Regenerate the Relaxed Cone Step Mapping cone map on the GPU using the current input and settings.",
     btnSave: "Save the generated PNG. R stores height and G stores cone ratio.",
     selMode: "Switch the preview between relief display, source height, cone ratio, and raymarch iteration count.",
@@ -493,6 +499,15 @@ for(const id of ["selSize", "selChannel", "chkInvert"]){
 }
 
 // ---------- メインループ ----------
+function updateGeneratorUI(){
+  const robust = $("selGenerator" ).value === "robust";
+  $("rngRadius" ).disabled = robust;
+  $("rngSteps" ).disabled = robust;
+  $("robustHint" ).textContent = robust ? "Exact falling-edge generation; search radius and ray steps are not used." : "Approximate GPU Gems 3 generation; search radius and ray steps control quality.";
+}
+$("selGenerator" ).addEventListener("change", updateGeneratorUI);
+updateGeneratorUI();
+
 let genActive = false;
 function frame(){
   const now = performance.now();
@@ -522,6 +537,7 @@ function frame(){
     mode: isMobile ? 0 : viewMode,
     lightAz: (+$("rngLightAz").value + autoLightT) % 360,
     lightEl: +$("rngLightEl").value,
+    robust: generator === generators.robust,
   });
   requestAnimationFrame(frame);
 }

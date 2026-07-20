@@ -108,6 +108,7 @@ uniform bool  uShadow;
 uniform bool  uUseColor;
 uniform bool  uSpecular;
 uniform bool  uShading;
+uniform bool  uRobust;
 uniform int   uMode;        // 0:レリーフ 1:高さ 2:コーン
 in vec3 vWorld;
 in vec2 vUV;
@@ -150,7 +151,18 @@ void main(){
     float h = d - p.z;
     if(h <= 0.001) break;
     float c = cAt(p.xy);
-    p += dir * (c * h / (rr + c));
+    float stepT = c * h / (rr + c);
+    if(uRobust){
+      vec2 size = vec2(textureSize(uHeight, 0));
+      vec2 cellCenter = (floor(p.xy * size - 0.5) + 1.0) / size;
+      vec2 wall = cellCenter + sign(dir.xy) * 0.5 / size;
+      vec2 toWall = (wall - p.xy) / dir.xy;
+      float cellT = 1e20;
+      if(abs(dir.x) > 1e-8 && toWall.x > 0.0) cellT = min(cellT, toWall.x);
+      if(abs(dir.y) > 1e-8 && toWall.y > 0.0) cellT = min(cellT, toWall.y);
+      if(cellT < 1e19) stepT = max(stepT, cellT + 1e-5);
+    }
+    p += dir * stepT;
     marchCount = i + 1;
     if(p.z >= 1.0) break;
   }

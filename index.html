@@ -57,6 +57,13 @@
 
     <section>
       <h2>Cone Map Generation</h2>
+      <label>Implementation
+        <select id="selGenerator">
+          <option value="robust" selected>Robust RCS (EGSR 2024)</option>
+          <option value="legacy">Legacy approximate RCS</option>
+        </select>
+      </label>
+      <div id="robustHint" class="hint">Exact falling-edge cone generation, 3x3 bilinear correction, and cell-max preview tracing.</div>
       <label class="slider">Search Radius <span id="lblRadius">48</span> px
         <input type="range" id="rngRadius" min="8" max="192" value="48">
       </label>
@@ -138,6 +145,8 @@
 <script src="js/shaders.js"></script>
 <script src="js/gl.js"></script>
 <script src="js/generator.js"></script>
+<script src="js/robust-shaders.js"></script>
+<script src="js/robust-generator.js"></script>
 <script src="js/viewer.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/onnxruntime-web/dist/ort.min.js"></script>
 <script src="js/depth.js"></script>
