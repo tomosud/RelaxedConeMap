@@ -329,11 +329,11 @@ function updateHeatTicks(){
 
 function bindTooltips(){
   const tips = {
-    dropZone: "Load a height map image. Brighter pixels are treated as higher terrain and darker pixels as lower terrain.",
+    dropZone: "Drop, paste, or choose a photo. The browser estimates depth before generating the cone map.",
     btnCamera: "Take a photo with your phone camera, then generate depth and a cone map from it.",
-    btnPhoto: "Choose a photo from this device, then generate depth and a cone map from it.",
+
     btnSample: "Create a sample height map and immediately start cone map generation.",
-    btnHeight: "Choose and load a height map image. Brighter pixels are treated as higher terrain and darker pixels as lower terrain.",
+    btnHeight: "Choose an existing height or depth map directly, without AI depth estimation.",
     selSize: "The output cone map PNG resolution. Larger values add detail, generation time, and memory use.",
     selChannel: "Choose which input image channel is used as height. Luminance is usually best; use R/G/B/A for dedicated source maps.",
     chkInvert: "Invert the height values. Enable this when black is high and white is low.",
@@ -390,6 +390,20 @@ function loadFile(file){
   img.src = url;
 }
 
+function showPhotoThumbnail(dataUrl){
+  const preview = $("photoThumb");
+  const img = new Image();
+  img.onload = () => {
+    const ctx = preview.getContext("2d");
+    const scale = Math.min(preview.width / img.width, preview.height / img.height);
+    const w = img.width * scale, h = img.height * scale;
+    ctx.fillStyle = "#0d1015";
+    ctx.fillRect(0, 0, preview.width, preview.height);
+    ctx.drawImage(img, (preview.width - w) * 0.5, (preview.height - h) * 0.5, w, h);
+    preview.hidden = false;
+  };
+  img.src = dataUrl;
+}
 async function loadDepthFile(file){
   if(!file || !file.type.startsWith("image/")) return;
   if(!depthEngine){
@@ -401,9 +415,10 @@ async function loadDepthFile(file){
   const reader = new FileReader();
   reader.onerror = () => $("status").textContent = "Could not load the image.";
   reader.onload = async e => {
+    showPhotoThumbnail(e.target.result);
     try {
       $("btnCamera").disabled = true;
-      $("btnPhoto").disabled = true;
+
       $("btnGen").disabled = true;
       $("btnSave").disabled = true;
       $("status").textContent = "Loading depth estimation model...";
@@ -430,27 +445,36 @@ async function loadDepthFile(file){
       $("btnGen").disabled = false;
     } finally {
       $("btnCamera").disabled = false;
-      $("btnPhoto").disabled = false;
+
     }
   };
   reader.readAsDataURL(file);
 }
 
 const dz = $("dropZone");
-dz.addEventListener("click", () => $("fileInput").click());
+dz.addEventListener("click", () => $("depthFileInput").click());
 dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("over"); });
 dz.addEventListener("dragleave", () => dz.classList.remove("over"));
 dz.addEventListener("drop", e => {
   e.preventDefault();
   dz.classList.remove("over");
-  loadFile(e.dataTransfer.files[0]);
+  const file = Array.from(e.dataTransfer.files).find(f => f.type.startsWith("image/"));
+  if(file) loadDepthFile(file);
+});
+document.addEventListener("paste", e => {
+  const item = Array.from(e.clipboardData?.items || []).find(i => i.type.startsWith("image/"));
+  const file = item?.getAsFile();
+  if(!file) return;
+  e.preventDefault();
+  $("status").textContent = "Pasted photo received. Preparing depth estimation...";
+  loadDepthFile(file);
 });
 $("fileInput").addEventListener("change", e => loadFile(e.target.files[0]));
 $("cameraInput").addEventListener("change", e => loadDepthFile(e.target.files[0]));
 $("depthFileInput").addEventListener("change", e => loadDepthFile(e.target.files[0]));
 $("btnHeight").addEventListener("click", () => $("fileInput").click());
 $("btnCamera").addEventListener("click", () => $("cameraInput").click());
-$("btnPhoto").addEventListener("click", () => $("depthFileInput").click());
+
 
 // スマホスタート画面のボタン
 const mStartCamera = $("mStartCamera"), mStartPhoto = $("mStartPhoto");

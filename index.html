@@ -20,17 +20,15 @@
       <input type="file" id="cameraInput" accept="image/*" capture="environment" hidden>
       <input type="file" id="depthFileInput" accept="image/*" hidden>
 
-      <h3 class="method">1. From Height Map</h3>
-      <div id="dropZone">Drop an image here<br>or click to choose a file</div>
-      <button id="btnHeight" class="fullBtn mobileOnly">Choose Height Map Image</button>
-      <div class="hint">Uses the source as a height map, where brighter pixels are higher.</div>
+      <h3 class="method">1. From Photo (Depth Estimation)</h3>
+      <div id="dropZone">Drop or paste a photo here<br>or click to choose a photo</div>
+      <div class="hint">Accepts image paste with Ctrl+V / Cmd+V. The pasted or selected photo appears below before depth estimation.</div>
+      <canvas id="photoThumb" class="inputPreview" width="220" height="140" hidden></canvas>
+      <button id="btnCamera" class="primary mobileOnly">Capture and Generate Depth</button>
 
-      <h3 class="method">2. From Photo (Depth Estimation)</h3>
-      <div class="row">
-        <button id="btnCamera" class="primary mobileOnly">Capture and Generate Depth</button>
-        <button id="btnPhoto" class="fullBtn">Choose Photo and Generate Depth</button>
-      </div>
-      <div class="hint">Estimates depth from a regular photo with AI and converts it to a height map.</div>
+      <h3 class="method">2. From Height / Depth Map</h3>
+      <button id="btnHeight" class="fullBtn">Choose Height / Depth Map</button>
+      <div class="hint">Loads an existing map directly. Brighter pixels are treated as higher.</div>
 
       <button id="btnSample" class="fullBtn sampleBtn">Try Sample Terrain</button>
 
