@@ -76,7 +76,10 @@ void main(){
   float c = 1.0;
   for(int y = -1; y <= 1; ++y)
     for(int x = -1; x <= 1; ++x) c = min(c, coneAt(p + ivec2(x, y)));
-  outColor = vec4(c, c, c, 1.0);
+
+  uint q = uint(floor(clamp(c, 0.0, 1.0) * 16777215.0));
+  vec3 packed = vec3(float(q & 255u), float((q >> 8) & 255u), float((q >> 16) & 255u)) / 255.0;
+  outColor = vec4(packed, 1.0);
 }
 `,
 
@@ -88,7 +91,8 @@ out vec4 outColor;
 void main(){
   ivec2 p = ivec2(gl_FragCoord.xy);
   float h = texelFetch(uHeight, p, 0).r;
-  float c = texelFetch(uCone, p, 0).r;
+  vec3 packed = texelFetch(uCone, p, 0).rgb;
+  float c = dot(round(packed * 255.0), vec3(1.0, 256.0, 65536.0)) / 16777215.0;
   c = floor(clamp(c, 0.0, 1.0) * 255.0) / 255.0;
   outColor = vec4(h, c, 0.0, 1.0);
 }

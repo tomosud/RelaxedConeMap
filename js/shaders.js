@@ -116,7 +116,24 @@ out vec4 outColor;
 
 float hAt(vec2 uv){ return texture(uHeight, uv).r; }
 float dAt(vec2 uv){ return 1.0 - texture(uHeight, uv).r; }
-float cAt(vec2 uv){ return max(texture(uCone, uv).r, 0.002); }
+float robustConeTexel(ivec2 p){
+  ivec2 n = textureSize(uCone, 0);
+  p = ivec2((p.x % n.x + n.x) % n.x, (p.y % n.y + n.y) % n.y);
+  vec3 packed = texelFetch(uCone, p, 0).rgb;
+  return dot(round(packed * 255.0), vec3(1.0, 256.0, 65536.0)) / 16777215.0;
+}
+float cAt(vec2 uv){
+  if(!uRobust) return max(texture(uCone, uv).r, 0.002);
+  vec2 size = vec2(textureSize(uCone, 0));
+  vec2 p = fract(uv) * size - 0.5;
+  ivec2 i = ivec2(floor(p));
+  vec2 f = fract(p);
+  float c00 = robustConeTexel(i);
+  float c10 = robustConeTexel(i + ivec2(1, 0));
+  float c01 = robustConeTexel(i + ivec2(0, 1));
+  float c11 = robustConeTexel(i + ivec2(1, 1));
+  return max(mix(mix(c00, c10, f.x), mix(c01, c11, f.x), f.y), 1e-7);
+}
 
 vec3 heatColor(float t){
   t = clamp(t, 0.0, 1.0);
@@ -128,7 +145,7 @@ vec3 heatColor(float t){
 void main(){
   vec2 uv0 = vUV * uTile;
   if(uMode == 1){ outColor = vec4(vec3(hAt(uv0)), 1.0); return; }
-  if(uMode == 2){ outColor = vec4(vec3(texture(uCone, uv0).r), 1.0); return; }
+  if(uMode == 2){ outColor = vec4(vec3(cAt(uv0)), 1.0); return; }
 
   vec3 wdir = normalize(vWorld - uCam);
   float ds = max(uDepth, 1e-4);

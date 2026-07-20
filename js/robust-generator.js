@@ -34,6 +34,7 @@ class RobustConeMapGenerator {
     this.passIdx = 0;
     this.totalPasses = 0;
     this.elapsed = 0;
+    this.debugStats = null;
   }
 
   setHeight(source, maxHeight, wrap){
@@ -51,7 +52,7 @@ class RobustConeMapGenerator {
         : makeTex(gl, n, n);
       this.ping = [0, 1].map(() => makeTex(gl, n, n, { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT }));
       this.fbo = this.ping.map(makeFBO.bind(null, gl));
-      this.correctedTex = makeTex(gl, n, n, { internalFormat: gl.R32F, format: gl.RED, type: gl.FLOAT });
+      this.correctedTex = makeTex(gl, n, n);
       this.correctedFbo = makeFBO(gl, this.correctedTex);
       this.exportTex = makeTex(gl, n, n);
       this.exportFbo = makeFBO(gl, this.exportTex);
@@ -108,6 +109,7 @@ class RobustConeMapGenerator {
     this.done = false;
     this.t0 = performance.now();
     this.elapsed = 0;
+    this.debugStats = null;
   }
 
   _generatePass(){
@@ -144,6 +146,7 @@ class RobustConeMapGenerator {
     this.busy = false;
     this.done = true;
     this.elapsed = (performance.now() - this.t0) / 1000;
+    this.debugStats = this._collectDebugStats();
   }
 
   runChunk(budgetMs){
@@ -161,8 +164,52 @@ class RobustConeMapGenerator {
     this.busy = false;
     this.done = true;
     this.elapsed = (performance.now() - this.t0) / 1000;
+    this.debugStats = this._collectDebugStats();
   }
 
+
+  _statsForFbo(fbo, packed = false){
+    const gl = this.gl;
+    let values;
+    gl.bindFramebuffer(gl.FRAMEBUFFER, fbo);
+    if(packed){
+      const bytes = new Uint8Array(this.size * this.size * 4);
+      gl.readPixels(0, 0, this.size, this.size, gl.RGBA, gl.UNSIGNED_BYTE, bytes);
+      values = new Float32Array(this.size * this.size);
+      for(let i = 0; i < values.length; ++i)
+        values[i] = (bytes[i*4] + bytes[i*4+1]*256 + bytes[i*4+2]*65536) / 16777215;
+    } else {
+      values = new Float32Array(this.size * this.size);
+      gl.readPixels(0, 0, this.size, this.size, gl.RED, gl.FLOAT, values);
+    }
+    let min = Infinity, max = -Infinity, sum = 0, zeros = 0, invalid = 0;
+    for(const v of values){
+      if(!Number.isFinite(v)){ invalid++; continue; }
+      min = Math.min(min, v); max = Math.max(max, v); sum += v;
+      if(v === 0) zeros++;
+    }
+    const valid = values.length - invalid;
+    return {
+      min: valid ? min : NaN,
+      max: valid ? max : NaN,
+      mean: valid ? sum / valid : NaN,
+      zeroPercent: 100 * zeros / values.length,
+      invalid,
+    };
+  }
+
+  _collectDebugStats(){
+    const raw = this._statsForFbo(this.fbo[this.cur]);
+    const corrected = this._statsForFbo(this.correctedFbo, true);
+    this.gl.bindFramebuffer(this.gl.FRAMEBUFFER, null);
+    return { raw, corrected, size: this.size };
+  }
+
+  getDebugText(){
+    if(!this.debugStats) return "Robust debug: no completed generation";
+    const f = s => `min=${s.min.toExponential(4)} max=${s.max.toExponential(4)} mean=${s.mean.toExponential(4)} zero=${s.zeroPercent.toFixed(2)}% invalid=${s.invalid}`;
+    return `Robust ${this.debugStats.size}x${this.debugStats.size}\nRaw:       ${f(this.debugStats.raw)}\nCorrected: ${f(this.debugStats.corrected)}`;
+  }
   exportPixels(){
     const gl = this.gl, n = this.size;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.exportFbo);

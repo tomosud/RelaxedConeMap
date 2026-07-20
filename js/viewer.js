@@ -266,7 +266,7 @@ class Viewer {
     gl.bindSampler(0, this.smp);
     gl.activeTexture(gl.TEXTURE1);
     gl.bindTexture(gl.TEXTURE_2D, coneTex);
-    gl.bindSampler(1, P.robust ? this.robustConeSmp : this.coneSmp);
+    gl.bindSampler(1, this.coneSmp);
     gl.activeTexture(gl.TEXTURE2);
     gl.bindTexture(gl.TEXTURE_2D, this.colorTex || heightTex);
     gl.bindSampler(2, this.smp);

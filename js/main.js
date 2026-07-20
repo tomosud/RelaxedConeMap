@@ -226,6 +226,7 @@ function finishUI(aborted){
   $("status").textContent = aborted
     ? `Canceled (${generator.elapsed.toFixed(1)} sec)`
     : `Done (${generator.elapsed.toFixed(1)} sec)`;
+  $("coneDebug").textContent = generator.getDebugText ? generator.getDebugText() : "Legacy generator: GPU debug statistics unavailable";
 }
 
 // ---------- PNG 保存 ----------
