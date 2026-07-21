@@ -191,6 +191,5 @@ run_local.bat                       ローカル HTTP サーバー
 - F. Policarpo, M. M. Oliveira, [“Relaxed Cone Stepping for Relief Mapping”](https://developer.nvidia.com/gpugems/gpugems3/part-iii-rendering/chapter-18-relaxed-cone-stepping-relief-mapping), GPU Gems 3, Chapter 18
 - J. Dummer, “Cone Step Mapping: An Iterative Ray-Heightfield Intersection Algorithm”
 
-## License
-
+**License**
 MIT
