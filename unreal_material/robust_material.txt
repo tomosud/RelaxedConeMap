@@ -1,0 +1,297 @@
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_0"
+   Begin Object Class=/Script/Engine.MaterialExpressionTextureSample Name="MaterialExpressionTextureSample_0"
+   End Object
+   Begin Object Name="MaterialExpressionTextureSample_0"
+      Texture="/Script/Engine.Texture'/Game/Developers/TomohisaOda/relaxconeStep/conemap_256.conemap_256'"
+      SamplerType=SAMPLERTYPE_LinearColor
+      Coordinates=(Expression="/Script/Engine.MaterialExpressionCustom'MaterialGraphNode_2.MaterialExpressionCustom_2'")
+      TextureObject=(Expression="/Script/Engine.MaterialExpressionReroute'MaterialGraphNode_9.MaterialExpressionReroute_9'")
+      MaterialExpressionEditorX=2352
+      MaterialExpressionEditorY=1792
+      MaterialExpressionGuid=72EB4A93F05554578098165EBBAF73C5
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionTextureSample'MaterialExpressionTextureSample_0'"
+   NodePosX=2352
+   NodePosY=1792
+   NodeGuid=A07A5538E87F5D9CBA8189B87FA4E017
+   CustomProperties Pin (PinId=1B8E144A26F7528B8C423D035ADD54D8,PinName="Coordinates",LinkedTo=(MaterialGraphNode_2 23E1780DA85F5E288A7A223778956C12,),)
+   CustomProperties Pin (PinId=6C9C7F43891D5D2194759CE32ED48089,PinName="TextureObject",LinkedTo=(MaterialGraphNode_9 AC8D4AB9318956A7BA1E8769EB8FB40F,),)
+   CustomProperties Pin (PinId=089A2A61D20C5092AA370F93D6F33D6C,PinName="MipValue",)
+   CustomProperties Pin (PinId=0E0A3715DFC65106A6F93DB3C9D93B6D,PinName="CoordinatesDX",)
+   CustomProperties Pin (PinId=04CBDE1E9D0E588BBF23E8AFB5753898,PinName="CoordinatesDY",)
+   CustomProperties Pin (PinId=1AFF9788F1185CE191265B6C670A0F7A,PinName="Apply View MipBias",)
+   CustomProperties Pin (PinId=7219679C9B075DEAACD24E3702A08C53,PinName="MipValueMode",)
+   CustomProperties Pin (PinId=5D2B97E4787F5FCD9B0B3A6D39BA4880,PinName="SamplerSource",)
+   CustomProperties Pin (PinId=DAE9502C43665AC3A18AC64755C84C7E,PinName="RGB",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_13 441FFABD8C69568DB6761C0E0E8E5036,),)
+   CustomProperties Pin (PinId=13467DAF74B2598592EE8D825FE1FDBC,PinName="R",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_1 E2795DF0F0E15256965072A026F91D73,),)
+   CustomProperties Pin (PinId=8C5C34DCF8F254F7AA9CDB7B2C5526C1,PinName="G",Direction="EGPD_Output",)
+   CustomProperties Pin (PinId=01B5027DD588587EA93C394CC9E79D60,PinName="B",Direction="EGPD_Output",)
+   CustomProperties Pin (PinId=4185FB8C22D05491B0EC2674F524D568,PinName="A",Direction="EGPD_Output",)
+   CustomProperties Pin (PinId=4E16F2692CF25DD79CCAF52025F461AC,PinName="RGBA",Direction="EGPD_Output",)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode_Custom Name="MaterialGraphNode_1"
+   Begin Object Class=/Script/Engine.MaterialExpressionCustom Name="MaterialExpressionCustom_1"
+   End Object
+   Begin Object Name="MaterialExpressionCustom_1"
+      Code="float2 e = max(TexelSize, float2(1e-6, 1e-6));\nfloat center = CenterHeight;\nfloat hR = Texture2DSample(ConeMap, ConeMapSampler, UV + float2(e.x, 0.0)).r;\nfloat hU = Texture2DSample(ConeMap, ConeMapSampler, UV + float2(0.0, e.y)).r;\n\nfloat dx = (hR - center) * rcp(e.x) * Depth;\nfloat dy = (hU - center) * rcp(e.y) * Depth;\n\nreturn normalize(float3(-dx, -dy, 1.0));"
+      Description="RobustCone_Normal_2Tap"
+      ContainsClipInstruction=CMCI_No
+      ShowCode=True
+      Inputs(0)=(InputName="ConeMap")
+      Inputs(1)=(InputName="UV")
+      Inputs(2)=(InputName="TexelSize")
+      Inputs(3)=(InputName="Depth")
+      Inputs(4)=(InputName="CenterHeight")
+      MaterialExpressionEditorX=2560
+      MaterialExpressionEditorY=2512
+      MaterialExpressionGuid=C274145B51D153FEB48C9A68946455A0
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionCustom'MaterialExpressionCustom_1'"
+   NodePosX=2560
+   NodePosY=2512
+   NodeGuid=F6F6780C7CD95EE283C704AF20A82115
+   CustomProperties Pin (PinId=AC93C774B77D5EA09C27F16BD67B91FB,PinName="ConeMap",LinkedTo=(MaterialGraphNode_9 AC8D4AB9318956A7BA1E8769EB8FB40F,),)
+   CustomProperties Pin (PinId=EEAAEC83991E58DBB981B8BEA54D9CFA,PinName="UV",LinkedTo=(MaterialGraphNode_2 23E1780DA85F5E288A7A223778956C12,),)
+   CustomProperties Pin (PinId=31DC41EEB2DB53C395BBC6DB49FD6CD6,PinName="TexelSize",LinkedTo=(MaterialGraphNode_10 804CB044EB5A5C8ABF66794F4841A3B8,),)
+   CustomProperties Pin (PinId=97A28AD83D7A5BEABCB9AF83DEAFE816,PinName="Depth",LinkedTo=(MaterialGraphNode_12 6FB2203564ED5967A7A80D5DEF30AD9B,),)
+   CustomProperties Pin (PinId=E2795DF0F0E15256965072A026F91D73,PinName="CenterHeight",LinkedTo=(MaterialGraphNode_0 13467DAF74B2598592EE8D825FE1FDBC,),)
+   CustomProperties Pin (PinId=275461127B5C5D4C9615E9E7ACB5F0DA,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_14 E6A79A05B08B5610B060AA8B78794246,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode_Custom Name="MaterialGraphNode_2"
+   Begin Object Class=/Script/Engine.MaterialExpressionCustom Name="MaterialExpressionCustom_2"
+   End Object
+   Begin Object Name="MaterialExpressionCustom_2"
+      Code="// Robust Cone Step Mapping (Ban et al., EGSR 2024)\n// Conservative 'cell-max' tracing: each step advances at least to the\n// next height-map texel border, guaranteeing progress on grazing rays.\nconst int CONE_STEPS = 32;\nconst int BIN_STEPS = 5;\nconst float VZ_EPS = 1e-3;\nconst float MIN_CONE_RATIO = 0.002;\nconst float DENOM_EPS = 1e-6;\nconst float BORDER_EPS = 1e-5;\n\nfloat vz = max(ViewTS.z, VZ_EPS);\nfloat2 rayUVPerDepth = -(ViewTS.xy / vz) * abs(Depth);\nfloat rayRatio = length(rayUVPerDepth);\n\nfloat2 texel = max(TexelSize, float2(1e-6, 1e-6));\nfloat2 dirSign = float2(rayUVPerDepth.x < 0.0 ? -0.5 : 0.5, rayUVPerDepth.y < 0.0 ? -0.5 : 0.5) * texel;\nfloat2 invRay = float2(abs(rayUVPerDepth.x) < DENOM_EPS ? 1e16 : rcp(rayUVPerDepth.x), abs(rayUVPerDepth.y) < DENOM_EPS ? 1e16 : rcp(rayUVPerDepth.y));\n\nfloat t = 0.0;\nfloat prevT = 0.0;\n\n[loop]\nfor (int i = 0; i < CONE_STEPS; ++i)\n{\n    float2 sampleUV = UV + rayUVPerDepth * t;\n    float2 coneData = Texture2DSample(ConeMap, ConeMapSampler, sampleUV).rg;\n    float gap = (1.0 - saturate(coneData.r)) - t;\n\n    if (gap <= 0.0)\n    {\n        break;\n    }\n\n    float coneRatio = max(coneData.g, MIN_CONE_RATIO);\n    float coneStepT = coneRatio * gap * rcp(max(rayRatio + coneRatio, DENOM_EPS));\n\n    // conservative cell-max step: reach at least the next texel border\n    float2 cellCenter = (floor(sampleUV / texel - 0.5) + 1.0) * texel;\n    float2 wall = cellCenter + dirSign;\n    float2 stepToBorder = (wall - sampleUV) * invRay;\n    float cellStepT = min(stepToBorder.x, stepToBorder.y) + BORDER_EPS;\n\n    float stepT = max(cellStepT, coneStepT);\n\n    prevT = t;\n    t = min(t + stepT, 1.0);\n\n    if (t >= 1.0)\n    {\n        break;\n    }\n}\n\nfloat lo = prevT;\nfloat hi = t;\n\n[unroll]\nfor (int j = 0; j < BIN_STEPS; ++j)\n{\n    float mid = 0.5 * (lo + hi);\n    float2 sampleUV = UV + rayUVPerDepth * mid;\n    float height = Texture2DSample(ConeMap, ConeMapSampler, sampleUV).r;\n    float surfaceDepth = 1.0 - saturate(height);\n\n    if (mid < surfaceDepth)\n    {\n        lo = mid;\n    }\n    else\n    {\n        hi = mid;\n    }\n}\n\nreturn UV + rayUVPerDepth * hi;"
+      OutputType=CMOT_Float2
+      Description="RobustCone_CellMax_32x5"
+      ContainsClipInstruction=CMCI_No
+      ShowCode=True
+      Inputs(0)=(InputName="ConeMap")
+      Inputs(1)=(InputName="UV")
+      Inputs(2)=(InputName="ViewTS")
+      Inputs(3)=(InputName="Depth")
+      Inputs(4)=(InputName="TexelSize")
+      MaterialExpressionEditorX=1488
+      MaterialExpressionEditorY=2480
+      MaterialExpressionGuid=ABE18CCFABD456549641E3C11AE07F61
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionCustom'MaterialExpressionCustom_2'"
+   NodePosX=1488
+   NodePosY=2480
+   NodeGuid=45FBB21DCD705D5D91CAD75152757B57
+   CustomProperties Pin (PinId=932F5E33EC1854128819C6B4A4618245,PinName="ConeMap",LinkedTo=(MaterialGraphNode_9 AC8D4AB9318956A7BA1E8769EB8FB40F,),)
+   CustomProperties Pin (PinId=120A517DB7455124A44F0D4F0023A4BC,PinName="UV",LinkedTo=(MaterialGraphNode_11 EEB0B33B0B0E58818ABE68D179F44097,),)
+   CustomProperties Pin (PinId=5619015AFF9657C5B9385C160BCAF70E,PinName="ViewTS",LinkedTo=(MaterialGraphNode_5 D2AACB788C6455FDB8B46A01336FD64B,),)
+   CustomProperties Pin (PinId=D47C1C88C95E578CA8FB6FE55DBBCA28,PinName="Depth",LinkedTo=(MaterialGraphNode_12 6FB2203564ED5967A7A80D5DEF30AD9B,),)
+   CustomProperties Pin (PinId=AE354EA7D5805BDB80B4E2C2FA48A893,PinName="TexelSize",LinkedTo=(MaterialGraphNode_10 804CB044EB5A5C8ABF66794F4841A3B8,),)
+   CustomProperties Pin (PinId=23E1780DA85F5E288A7A223778956C12,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_0 1B8E144A26F7528B8C423D035ADD54D8,MaterialGraphNode_1 EEAAEC83991E58DBB981B8BEA54D9CFA,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_3"
+   Begin Object Class=/Script/Engine.MaterialExpressionTextureObjectParameter Name="MaterialExpressionTextureObjectParameter_3"
+   End Object
+   Begin Object Name="MaterialExpressionTextureObjectParameter_3"
+      ParameterName="ConeMap"
+      Texture="/Script/Engine.Texture'/Game/Developers/TomohisaOda/relaxconeStep/conemap_256.conemap_256'"
+      SamplerType=SAMPLERTYPE_LinearColor
+      MaterialExpressionEditorX=32
+      MaterialExpressionEditorY=1824
+      MaterialExpressionGuid=92595DCA9B885E1DB10670F673EAFB47
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionTextureObjectParameter'MaterialExpressionTextureObjectParameter_3'"
+   NodePosX=32
+   NodePosY=1824
+   NodeGuid=B04306D335175961832531E8734CD3DD
+   CustomProperties Pin (PinId=D867FF271F12530F8BD0A2425FE3A155,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_9 416D779FB5FC56EC9A21F64907F37CC7,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_4"
+   Begin Object Class=/Script/Engine.MaterialExpressionCameraVectorWS Name="MaterialExpressionCameraVectorWS_4"
+   End Object
+   Begin Object Name="MaterialExpressionCameraVectorWS_4"
+      MaterialExpressionEditorX=1136
+      MaterialExpressionEditorY=2144
+      MaterialExpressionGuid=492964EB3FC657C0B0FCBA8EE7493D3B
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionCameraVectorWS'MaterialExpressionCameraVectorWS_4'"
+   NodePosX=1136
+   NodePosY=2144
+   NodeGuid=37C66417C19C59548645932E938DBF72
+   CustomProperties Pin (PinId=142B41F8440E558BA1D5F651BC9B12F8,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_5 62343DE0FB3051C5A1CAD34645ACF2D1,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_5"
+   Begin Object Class=/Script/Engine.MaterialExpressionTransform Name="MaterialExpressionTransform_5"
+   End Object
+   Begin Object Name="MaterialExpressionTransform_5"
+      TransformSourceType=TRANSFORMSOURCE_World
+      TransformType=TRANSFORM_Tangent
+      Input=(Expression="/Script/Engine.MaterialExpressionCameraVectorWS'MaterialGraphNode_4.MaterialExpressionCameraVectorWS_4'")
+      MaterialExpressionEditorX=1344
+      MaterialExpressionEditorY=2160
+      MaterialExpressionGuid=1EA4F9345C295957815A2005ACAA536E
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionTransform'MaterialExpressionTransform_5'"
+   NodePosX=1344
+   NodePosY=2160
+   NodeGuid=68ED1BA52AFA55C0AB363975FD66BF76
+   CustomProperties Pin (PinId=62343DE0FB3051C5A1CAD34645ACF2D1,PinName="Input",LinkedTo=(MaterialGraphNode_4 142B41F8440E558BA1D5F651BC9B12F8,),)
+   CustomProperties Pin (PinId=6B00C326FDAD59319382CEEE6918CC93,PinName="TransformSourceType",)
+   CustomProperties Pin (PinId=810EF3A3872F5CEB9F4857AC40FD2CC5,PinName="TransformType",)
+   CustomProperties Pin (PinId=D2AACB788C6455FDB8B46A01336FD64B,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_2 5619015AFF9657C5B9385C160BCAF70E,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_6"
+   Begin Object Class=/Script/Engine.MaterialExpressionTextureCoordinate Name="MaterialExpressionTextureCoordinate_6"
+   End Object
+   Begin Object Name="MaterialExpressionTextureCoordinate_6"
+      MaterialExpressionEditorX=432
+      MaterialExpressionEditorY=2000
+      MaterialExpressionGuid=7130CAF842AB560C857E361BF21FF6EF
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionTextureCoordinate'MaterialExpressionTextureCoordinate_6'"
+   NodePosX=432
+   NodePosY=2000
+   NodeGuid=A7E1B6BEFA985EB4B56364D805B1C0B6
+   CustomProperties Pin (PinId=F4E4434BCAA359B5A4A8703BE42411FA,PinName="CoordinateIndex",)
+   CustomProperties Pin (PinId=E241F14E14375B218157BC9DEAC709F1,PinName="UTiling",)
+   CustomProperties Pin (PinId=85940EFDE90C5B5FB9C4E10A5E91F811,PinName="VTiling",)
+   CustomProperties Pin (PinId=C72019FBA977568FB60A606C09A437B6,PinName="UnMirrorU",)
+   CustomProperties Pin (PinId=32459FD6790E538F9BB4F540663A344E,PinName="UnMirrorV",)
+   CustomProperties Pin (PinId=9CC2D85295E5505CB78A2809A793FDD4,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_11 175F1483556A56EAB447FEAF8DAC2797,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_7"
+   Begin Object Class=/Script/Engine.MaterialExpressionScalarParameter Name="MaterialExpressionScalarParameter_7"
+   End Object
+   Begin Object Name="MaterialExpressionScalarParameter_7"
+      DefaultValue=-0.1
+      SliderMin=-0.5
+      SliderMax=-0.001
+      ParameterName="Depth"
+      MaterialExpressionEditorX=80
+      MaterialExpressionEditorY=2192
+      MaterialExpressionGuid=843223EAEED155B7A54082483CE3BA10
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionScalarParameter'MaterialExpressionScalarParameter_7'"
+   NodePosX=80
+   NodePosY=2192
+   NodeGuid=C1570CBD838C5E3CA938763055842BDE
+   CustomProperties Pin (PinId=832C9DA9AEDD5F69950A064C47F6741A,PinName="DefaultValue",)
+   CustomProperties Pin (PinId=31231FCC8E815D6BA18D3A8E362EAD92,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_12 4B268F85845E5446A5A20CDC8C378272,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_8"
+   Begin Object Class=/Script/Engine.MaterialExpressionTextureProperty Name="MaterialExpressionTextureProperty_8"
+   End Object
+   Begin Object Name="MaterialExpressionTextureProperty_8"
+      TextureObject=(Expression="/Script/Engine.MaterialExpressionReroute'MaterialGraphNode_9.MaterialExpressionReroute_9'")
+      MaterialExpressionEditorX=368
+      MaterialExpressionEditorY=2464
+      MaterialExpressionGuid=76A1AB74A1495DB5A9EE38516F99FDE3
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionTextureProperty'MaterialExpressionTextureProperty_8'"
+   NodePosX=368
+   NodePosY=2464
+   NodeGuid=30B72CFF0F7F5678BF4F9A4EFA0F3268
+   CustomProperties Pin (PinId=61C6F8E3BF195DB0A2CC4102F7FE5524,PinName="TextureObject",LinkedTo=(MaterialGraphNode_9 AC8D4AB9318956A7BA1E8769EB8FB40F,),)
+   CustomProperties Pin (PinId=AF7715256ECD5A87892C87A94DF6A54B,PinName="Property",)
+   CustomProperties Pin (PinId=1E08E7AF9B1C50AE95E3114141B9976D,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_10 A64E02D0A48852598519707BCEDF2891,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_9"
+   Begin Object Class=/Script/Engine.MaterialExpressionReroute Name="MaterialExpressionReroute_9"
+   End Object
+   Begin Object Name="MaterialExpressionReroute_9"
+      Input=(Expression="/Script/Engine.MaterialExpressionTextureObjectParameter'MaterialGraphNode_3.MaterialExpressionTextureObjectParameter_3'")
+      MaterialExpressionEditorX=304
+      MaterialExpressionEditorY=1856
+      MaterialExpressionGuid=B4A08B0FFC2F5B03BF5C3FF8A4ED1412
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionReroute'MaterialExpressionReroute_9'"
+   NodePosX=304
+   NodePosY=1856
+   NodeGuid=7A2DE63742B35A78A11E390805E9C566
+   CustomProperties Pin (PinId=416D779FB5FC56EC9A21F64907F37CC7,PinName="Input",LinkedTo=(MaterialGraphNode_3 D867FF271F12530F8BD0A2425FE3A155,),)
+   CustomProperties Pin (PinId=AC8D4AB9318956A7BA1E8769EB8FB40F,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_0 6C9C7F43891D5D2194759CE32ED48089,MaterialGraphNode_1 AC93C774B77D5EA09C27F16BD67B91FB,MaterialGraphNode_2 932F5E33EC1854128819C6B4A4618245,MaterialGraphNode_8 61C6F8E3BF195DB0A2CC4102F7FE5524,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_10"
+   Begin Object Class=/Script/Engine.MaterialExpressionDivide Name="MaterialExpressionDivide_10"
+   End Object
+   Begin Object Name="MaterialExpressionDivide_10"
+      B=(Expression="/Script/Engine.MaterialExpressionTextureProperty'MaterialGraphNode_8.MaterialExpressionTextureProperty_8'")
+      MaterialExpressionEditorX=576
+      MaterialExpressionEditorY=2368
+      MaterialExpressionGuid=7E31314C3EDD50AF90E40849DDD3FE3A
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionDivide'MaterialExpressionDivide_10'"
+   NodePosX=576
+   NodePosY=2368
+   NodeGuid=3511AA98D50C50C8947A6A585D18C809
+   CustomProperties Pin (PinId=BE6421454455556A9F671FB298324EBC,PinName="A",)
+   CustomProperties Pin (PinId=A64E02D0A48852598519707BCEDF2891,PinName="B",LinkedTo=(MaterialGraphNode_8 1E08E7AF9B1C50AE95E3114141B9976D,),)
+   CustomProperties Pin (PinId=804CB044EB5A5C8ABF66794F4841A3B8,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_1 31DC41EEB2DB53C395BBC6DB49FD6CD6,MaterialGraphNode_2 AE354EA7D5805BDB80B4E2C2FA48A893,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_11"
+   Begin Object Class=/Script/Engine.MaterialExpressionReroute Name="MaterialExpressionReroute_11"
+   End Object
+   Begin Object Name="MaterialExpressionReroute_11"
+      Input=(Expression="/Script/Engine.MaterialExpressionTextureCoordinate'MaterialGraphNode_6.MaterialExpressionTextureCoordinate_6'")
+      MaterialExpressionEditorX=752
+      MaterialExpressionEditorY=2016
+      MaterialExpressionGuid=60ED1486AA2159C1AD1B52741917DA01
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionReroute'MaterialExpressionReroute_11'"
+   NodePosX=752
+   NodePosY=2016
+   NodeGuid=0E47BBF5D4DC5FC082FBED9EC4804A90
+   CustomProperties Pin (PinId=175F1483556A56EAB447FEAF8DAC2797,PinName="Input",LinkedTo=(MaterialGraphNode_6 9CC2D85295E5505CB78A2809A793FDD4,),)
+   CustomProperties Pin (PinId=EEB0B33B0B0E58818ABE68D179F44097,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_2 120A517DB7455124A44F0D4F0023A4BC,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_12"
+   Begin Object Class=/Script/Engine.MaterialExpressionReroute Name="MaterialExpressionReroute_12"
+   End Object
+   Begin Object Name="MaterialExpressionReroute_12"
+      Input=(Expression="/Script/Engine.MaterialExpressionScalarParameter'MaterialGraphNode_7.MaterialExpressionScalarParameter_7'")
+      MaterialExpressionEditorX=368
+      MaterialExpressionEditorY=2224
+      MaterialExpressionGuid=D86FF0572BAF586C9131C8F73DF86B4F
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionReroute'MaterialExpressionReroute_12'"
+   NodePosX=368
+   NodePosY=2224
+   NodeGuid=71E8B9A25A415E2A9425185A9D2F28F9
+   CustomProperties Pin (PinId=4B268F85845E5446A5A20CDC8C378272,PinName="Input",LinkedTo=(MaterialGraphNode_7 31231FCC8E815D6BA18D3A8E362EAD92,),)
+   CustomProperties Pin (PinId=6FB2203564ED5967A7A80D5DEF30AD9B,PinName="Output",Direction="EGPD_Output",LinkedTo=(MaterialGraphNode_1 97A28AD83D7A5BEABCB9AF83DEAFE816,MaterialGraphNode_2 D47C1C88C95E578CA8FB6FE55DBBCA28,),)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_13"
+   Begin Object Class=/Script/Engine.MaterialExpressionNamedRerouteDeclaration Name="MaterialExpressionNamedRerouteDeclaration_13"
+   End Object
+   Begin Object Name="MaterialExpressionNamedRerouteDeclaration_13"
+      Name="to baseColor_1"
+      NodeColor=(R=1.0,G=0.515625,B=0.0,A=1.0)
+      VariableGuid=A1682A5F44FA2BB21E2BF0943A0C2216
+      Input=(Expression="/Script/Engine.MaterialExpressionTextureSample'MaterialGraphNode_0.MaterialExpressionTextureSample_0'")
+      MaterialExpressionEditorX=3120
+      MaterialExpressionEditorY=1888
+      MaterialExpressionGuid=65ED427EF00B57A6ACBEC8B3098D1C20
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionNamedRerouteDeclaration'MaterialExpressionNamedRerouteDeclaration_13'"
+   NodePosX=3120
+   NodePosY=1888
+   NodeGuid=F15439066D7F5919AD245A0B37E25AF0
+   CustomProperties Pin (PinId=441FFABD8C69568DB6761C0E0E8E5036,PinName="Input",LinkedTo=(MaterialGraphNode_0 DAE9502C43665AC3A18AC64755C84C7E,),)
+   CustomProperties Pin (PinId=55C22945393B5C4F914D4DEF91339EA0,PinName="Output",Direction="EGPD_Output",)
+End Object
+Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_14"
+   Begin Object Class=/Script/Engine.MaterialExpressionNamedRerouteDeclaration Name="MaterialExpressionNamedRerouteDeclaration_14"
+   End Object
+   Begin Object Name="MaterialExpressionNamedRerouteDeclaration_14"
+      Name="to Normal_1"
+      NodeColor=(R=0.195312,G=0.0,B=1.0,A=1.0)
+      VariableGuid=B5AEF2D14D629C7BCACB2FB62C927283
+      Input=(Expression="/Script/Engine.MaterialExpressionCustom'MaterialGraphNode_1.MaterialExpressionCustom_1'")
+      MaterialExpressionEditorX=3264
+      MaterialExpressionEditorY=2256
+      MaterialExpressionGuid=BBB777A996CB5375ABE79A09F8896516
+   End Object
+   MaterialExpression="/Script/Engine.MaterialExpressionNamedRerouteDeclaration'MaterialExpressionNamedRerouteDeclaration_14'"
+   NodePosX=3264
+   NodePosY=2256
+   NodeGuid=4122ECE8CA0753FB97C2673D6029346B
+   CustomProperties Pin (PinId=E6A79A05B08B5610B060AA8B78794246,PinName="Input",LinkedTo=(MaterialGraphNode_1 275461127B5C5D4C9615E9E7ACB5F0DA,),)
+   CustomProperties Pin (PinId=33F644F305F4524F8D3B7331635643C1,PinName="Output",Direction="EGPD_Output",)
+End Object
