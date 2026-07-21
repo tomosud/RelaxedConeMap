@@ -250,12 +250,27 @@ function savePNG(){
 }
 
 // ---------- Unreal マテリアルを別ページで表示 ----------
-let unrealMaterialText = null;
-// 起動時に先読みしておく
-fetch("unreal_material/material.txt")
-  .then(r => r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))
-  .then(t => { unrealMaterialText = t; })
-  .catch(() => { /* クリック時に再取得を試みる */ });
+const unrealMaterialPaths = {
+  robust: "unreal_material/robust_material.txt",
+  legacy: "unreal_material/material.txt",
+};
+const unrealMaterialTexts = {};
+
+function selectedUnrealMaterial(){
+  const mode = $("selGenerator").value;
+  return {
+    mode,
+    path: unrealMaterialPaths[mode] || unrealMaterialPaths.legacy,
+  };
+}
+
+// 起動時に両モードのテキストを先読みしておく
+for(const [mode, path] of Object.entries(unrealMaterialPaths)){
+  fetch(path)
+    .then(r => r.ok ? r.text() : Promise.reject(new Error(`HTTP ${r.status}`)))
+    .then(t => { unrealMaterialTexts[mode] = t; })
+    .catch(() => { /* クリック時に再取得を試みる */ });
+}
 
 function openMaterialPage(text){
   const json = JSON.stringify(text)
@@ -294,15 +309,16 @@ function openMaterialPage(text){
 async function copyUnrealMaterial(){
   const btn = $("btnCopyMaterial");
   try {
-    let text = unrealMaterialText;
+    const { mode, path } = selectedUnrealMaterial();
+    let text = unrealMaterialTexts[mode];
     if(text == null){
-      const res = await fetch("unreal_material/material.txt");
+      const res = await fetch(path);
       if(!res.ok) throw new Error(`HTTP ${res.status}`);
       text = await res.text();
-      unrealMaterialText = text;
+      unrealMaterialTexts[mode] = text;
     }
     if(!text || !text.trim()){
-      throw new Error("material.txt is empty. Please check the file contents.");
+      throw new Error(`${path} is empty. Please check the file contents.`);
     }
     const opened = openMaterialPage(text);
     if(!opened) throw new Error("The popup was blocked. Please allow popups and try again.");

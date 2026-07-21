@@ -2,7 +2,7 @@ Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_0"
    Begin Object Class=/Script/Engine.MaterialExpressionTextureSample Name="MaterialExpressionTextureSample_0"
    End Object
    Begin Object Name="MaterialExpressionTextureSample_0"
-      Texture="/Script/Engine.Texture'/Game/Developers/TomohisaOda/relaxconeStep/conemap_256.conemap_256'"
+      Texture="/Script/Engine.Texture'/Game/Developers/Anonymous/relaxconeStep/conemap_256.conemap_256'"
       SamplerType=SAMPLERTYPE_LinearColor
       Coordinates=(Expression="/Script/Engine.MaterialExpressionCustom'MaterialGraphNode_2.MaterialExpressionCustom_2'")
       TextureObject=(Expression="/Script/Engine.MaterialExpressionReroute'MaterialGraphNode_9.MaterialExpressionReroute_9'")
@@ -91,7 +91,7 @@ Begin Object Class=/Script/UnrealEd.MaterialGraphNode Name="MaterialGraphNode_3"
    End Object
    Begin Object Name="MaterialExpressionTextureObjectParameter_3"
       ParameterName="ConeMap"
-      Texture="/Script/Engine.Texture'/Game/Developers/TomohisaOda/relaxconeStep/conemap_256.conemap_256'"
+      Texture="/Script/Engine.Texture'/Game/Developers/Anonymous/relaxconeStep/conemap_256.conemap_256'"
       SamplerType=SAMPLERTYPE_LinearColor
       MaterialExpressionEditorX=32
       MaterialExpressionEditorY=1824
