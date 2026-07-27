@@ -75,7 +75,7 @@ const depthEngine = window.DepthEngine
   : null;
 
 // 傾き検出の有効化。iOS Safari は許可ダイアログが必要なので、
-// ファイル選択と同時に呼ぶと両方が潰れる。許可不要な端末だけ自動で有効化する。
+// ファイル選択と同時に呼ぶと両方が潰れる。タップ待ちにして写真選択を邪魔しない。
 const tiltNeedsPermission =
   typeof window.DeviceOrientationEvent === "function" &&
   typeof window.DeviceOrientationEvent.requestPermission === "function";
@@ -91,12 +91,42 @@ function updateMobileTiltButton(){
   b.textContent = viewer.tiltEnabled ? "Recenter Tilt" : "Enable Tilt";
 }
 
+// 傾き操作は既定で有効にする。
+// 許可が要らない端末は即座に、iOS は画面への最初のタップで一度だけ許可を求める
+// (写真選択と同時に要求するとファイル選択ダイアログが開けなくなるため)。
+let tiltPromptArmed = false;
+function autoEnableTilt(){
+  if(viewer.tiltEnabled) return;
+  if(!tiltNeedsPermission){
+    enableTiltDefault().then(updateMobileTiltButton);
+    return;
+  }
+  if(tiltPromptArmed) return;
+  tiltPromptArmed = true;
+  const askOnce = async () => {
+    canvas.removeEventListener("pointerdown", askOnce);
+    tiltPromptArmed = false;
+    await enableTiltDefault();
+    updateMobileTiltButton();
+    setStatus(viewer.tiltEnabled ? "Tilt control enabled." : "Tilt control was not allowed.");
+    setTimeout(clearMobileStatus, 1800);
+  };
+  canvas.addEventListener("pointerdown", askOnce);
+}
+
+// 生成の進捗表示が消えたあとに残す文言 (許可待ちならタップを促す)
+function clearMobileStatus(){
+  const bar = $("mStatus");
+  if(!bar) return;
+  bar.textContent = (tiltPromptArmed && !viewer.tiltEnabled)
+    ? "Tap the preview to enable tilt control." : "";
+}
+
 function enterMobileViewer(){
   if(!isMobile) return;
   document.body.classList.add("viewing");
   viewer.setFaceOn(true);
-  // 許可ダイアログが不要な端末 (Android など) はそのまま有効化
-  if(!tiltNeedsPermission) enableTiltDefault().then(updateMobileTiltButton);
+  autoEnableTilt();
   updateMobileTiltButton();
 }
 
@@ -285,8 +315,7 @@ function finishUI(aborted){
     : `Done (${generator.elapsed.toFixed(1)} sec)`);
   $("coneDebug").textContent = generator.getDebugText ? generator.getDebugText() : "Legacy generator: GPU debug statistics unavailable";
   // スマホは狭い表示欄なので、完了表示を残さず消す
-  const bar = $("mStatus");
-  if(isMobile && bar) setTimeout(() => { bar.textContent = ""; }, 1800);
+  if(isMobile) setTimeout(clearMobileStatus, 1800);
 }
 
 // ---------- PNG 保存 ----------

@@ -180,12 +180,13 @@ class Viewer {
     if(!this.tiltEnabled || e.beta == null || e.gamma == null) return;
     const clamp = (v, lo, hi) => Math.min(hi, Math.max(lo, v));
     if(this.faceOn){
-      // 正対モード: 傾きでカメラを横にオフセットしてレリーフを覗き込む
+      // 正対モード: 傾きでカメラを横にオフセットしてレリーフを覗き込む。
+      // 端末を右に傾けたら板の右側面が見える (視点は左へ動く) 向きに合わせる。
       if(!this.tiltBase) this.tiltBase = { beta: e.beta, gamma: e.gamma };
       const dB = clamp(e.beta - this.tiltBase.beta, -45, 45) / 45;
       const dG = clamp(e.gamma - this.tiltBase.gamma, -45, 45) / 45;
-      this.targetTiltX = dG;
-      this.targetTiltY = dB;
+      this.targetTiltX = -dG;
+      this.targetTiltY = -dB;
       return;
     }
     if(!this.tiltBase){
