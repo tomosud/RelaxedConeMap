@@ -77,5 +77,8 @@ body.mobile.viewing #mobileBar{display:block}
 .mStartInner button{min-height:54px;font-size:16px}
 #mStartStatus{min-height:18px;margin:4px 0 0}
 #mobileBar{position:fixed;left:0;right:0;bottom:0;z-index:25;padding:10px 16px calc(10px + env(safe-area-inset-bottom));background:linear-gradient(to top,rgba(20,22,26,.92),rgba(20,22,26,.55) 70%,transparent)}
-#mobileBar .slider{margin:0;color:#e6ebf2;font-size:13px}
+#mobileBar .slider{margin:0;color:#e6ebf2;font-size:13px;flex:1;min-width:0}
 #mobileBar input{width:100%;margin-top:4px}
+.mBarRow{display:flex;gap:10px;align-items:flex-end}
+.mBarRow button{min-height:40px;padding:8px 10px;font-size:14px;white-space:nowrap}
+#mStatus{min-height:16px;margin-bottom:6px;font-size:12px;color:#9fb6d8;text-shadow:0 1px 3px rgba(0,0,0,.8)}

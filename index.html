@@ -137,9 +137,14 @@
 </div>
 
 <div id="mobileBar">
-  <label class="slider">Depth <span id="mLblDepth">0.15</span>
-    <input type="range" id="mRngDepth" min="0.01" max="5" step="0.005" value="0.15">
-  </label>
+  <div id="mStatus"></div>
+  <div class="mBarRow">
+    <label class="slider">Depth <span id="mLblDepth">0.15</span>
+      <input type="range" id="mRngDepth" min="0.01" max="5" step="0.005" value="0.15">
+    </label>
+    <button id="mTilt">Enable Tilt</button>
+    <button id="mReset">New Photo</button>
+  </div>
 </div>
 <script src="js/shaders.js"></script>
 <script src="js/gl.js"></script>

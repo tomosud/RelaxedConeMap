@@ -5,13 +5,18 @@ const canvas = $("glcanvas");
 const gl = canvas.getContext("webgl2", { antialias: true });
 if(!gl){ $("glError").hidden = false; return; }
 
-let generator, generators, viewer;
+// スマホ (タッチ) モード判定。
+// 横向きの端末は幅 700px を超えることがあるので、粗いポインタと画面短辺も見る。
+const shortSide = Math.min(window.screen?.width || 9999, window.screen?.height || 9999);
+const isMobile = window.matchMedia("(max-width:700px)").matches
+  || (window.matchMedia("(pointer:coarse)").matches && shortSide <= 500);
+if(isMobile) document.body.classList.add("mobile");
+
+let generator, viewer;
+const generators = {};
+let robustError = null;
 try {
-  generators = {
-    legacy: new ConeMapGenerator(gl),
-    robust: new RobustConeMapGenerator(gl),
-  };
-  generator = generators.robust;
+  generators.legacy = new ConeMapGenerator(gl);
   viewer = new Viewer(gl, canvas);
 } catch(err) {
   const e = $("glError");
@@ -19,28 +24,80 @@ try {
   e.hidden = false;
   throw err;
 }
+// Robust は EXT_color_buffer_float 必須。未対応端末でもアプリ全体を止めない。
+try {
+  generators.robust = new RobustConeMapGenerator(gl);
+} catch(err) {
+  robustError = err;
+  console.warn("Robust RCS is unavailable:", err);
+}
+
+// スマホは軽い Relaxed Cone (legacy) を使う。
+// Robust は全セル走査で数千パスになり実機では完走できない。
+function pickGeneratorMode(){
+  if(isMobile) return "legacy";
+  const mode = $("selGenerator").value;
+  return generators[mode] ? mode : "legacy";
+}
+
+// スマホ向けの初期値 (解像度と探索範囲を落として実機でも完走させる)
+if(isMobile){
+  $("selGenerator").value = "legacy";
+  $("selSize").value = "256";
+  $("rngRadius").value = "32";
+  $("rngSteps").value = "16";
+  $("chkAutoLight").checked = false;
+}
+generator = generators[pickGeneratorMode()];
 
 let srcImage = null;   // Image または canvas
 let colorImage = null; // 深度推定プレビュー用の元画像カラー
 let processed = null;  // { canvas, maxH, n }
-const depthEngine = window.DepthEngine ? new DepthEngine() : null;
 let autoLightT = 0, lastT = performance.now();
 
-// スマホ (タッチ) モード判定
-const isMobile = window.matchMedia("(max-width:700px)").matches;
-if(isMobile) document.body.classList.add("mobile");
+// スマホでは状況表示 (#status) が隠れるので、専用の表示先にも流す
+function setStatus(text){
+  $("status").textContent = text;
+  if(!isMobile) return;
+  const start = $("mStartStatus");
+  if(start && !document.body.classList.contains("viewing")) start.textContent = text;
+  const bar = $("mStatus");
+  if(bar) bar.textContent = text;
+}
 
-// 傾き検出をデフォルト有効化 (ユーザージェスチャ内で試みる)
+const depthEngine = window.DepthEngine
+  ? new DepthEngine({
+      // スマホは 100MB 超のモデルでメモリ不足になりやすいので軽いモデルを優先
+      preferLightModel: isMobile,
+      maxSizeLimit: isMobile ? 392 : 0,
+      onStatus: setStatus,
+    })
+  : null;
+
+// 傾き検出の有効化。iOS Safari は許可ダイアログが必要なので、
+// ファイル選択と同時に呼ぶと両方が潰れる。許可不要な端末だけ自動で有効化する。
+const tiltNeedsPermission =
+  typeof window.DeviceOrientationEvent === "function" &&
+  typeof window.DeviceOrientationEvent.requestPermission === "function";
+
 async function enableTiltDefault(){
   if(viewer.tiltEnabled) return;
   try { await viewer.enableTilt(); } catch(_) { /* 不可ならドラッグ操作にフォールバック */ }
+}
+
+function updateMobileTiltButton(){
+  const b = $("mTilt");
+  if(!b) return;
+  b.textContent = viewer.tiltEnabled ? "Recenter Tilt" : "Enable Tilt";
 }
 
 function enterMobileViewer(){
   if(!isMobile) return;
   document.body.classList.add("viewing");
   viewer.setFaceOn(true);
-  enableTiltDefault();
+  // 許可ダイアログが不要な端末 (Android など) はそのまま有効化
+  if(!tiltNeedsPermission) enableTiltDefault().then(updateMobileTiltButton);
+  updateMobileTiltButton();
 }
 
 // サンプルボタンは初回(ユーザー入力前)だけ表示する
@@ -202,7 +259,7 @@ function makeSquareCanvas(source, n){
 }
 
 function startGenerate(){
-  generator = generators[$("selGenerator").value];
+  generator = generators[pickGeneratorMode()];
   if(!srcImage) srcImage = makeSampleHeight(512);
   processSource();
   generator.setHeight(processed, processed.maxH, $("chkWrap").checked);
@@ -223,10 +280,13 @@ function finishUI(aborted){
   $("btnAbort").hidden = true;
   $("btnSave").disabled = aborted;
   $("prog").value = aborted ? generator.progress : 1;
-  $("status").textContent = aborted
+  setStatus(aborted
     ? `Canceled (${generator.elapsed.toFixed(1)} sec)`
-    : `Done (${generator.elapsed.toFixed(1)} sec)`;
+    : `Done (${generator.elapsed.toFixed(1)} sec)`);
   $("coneDebug").textContent = generator.getDebugText ? generator.getDebugText() : "Legacy generator: GPU debug statistics unavailable";
+  // スマホは狭い表示欄なので、完了表示を残さず消す
+  const bar = $("mStatus");
+  if(isMobile && bar) setTimeout(() => { bar.textContent = ""; }, 1800);
 }
 
 // ---------- PNG 保存 ----------
@@ -257,7 +317,7 @@ const unrealMaterialPaths = {
 const unrealMaterialTexts = {};
 
 function selectedUnrealMaterial(){
-  const mode = $("selGenerator").value;
+  const mode = pickGeneratorMode();
   return {
     mode,
     path: unrealMaterialPaths[mode] || unrealMaterialPaths.legacy,
@@ -402,7 +462,7 @@ function loadFile(file){
   const url = URL.createObjectURL(file);
   const img = new Image();
   img.onload = () => { srcImage = img; colorImage = null; URL.revokeObjectURL(url); startGenerate(); };
-  img.onerror = () => { URL.revokeObjectURL(url); $("status").textContent = "Could not load the image."; };
+  img.onerror = () => { URL.revokeObjectURL(url); setStatus("Could not load the image."); };
   img.src = url;
 }
 
@@ -420,26 +480,41 @@ function showPhotoThumbnail(dataUrl){
   };
   img.src = dataUrl;
 }
+// スマホのスタート画面: 処理中は二重起動を防ぐ
+function setMobileStartBusy(busy){
+  for(const id of ["mStartCamera", "mStartPhoto"]){
+    const b = $(id);
+    if(b) b.disabled = busy;
+  }
+}
+
+// 同じ写真を選び直しても change が発火するように、開く前に値を空にする
+function openPicker(id){
+  const input = $(id);
+  input.value = "";
+  input.click();
+}
+
 async function loadDepthFile(file){
   if(!file || !file.type.startsWith("image/")) return;
   if(!depthEngine){
-    $("status").textContent = "Could not initialize the depth estimation engine.";
+    setStatus("Could not initialize the depth estimation engine.");
     return;
   }
   hideSampleButton();
   if(generator.busy) generator.abort();
   const reader = new FileReader();
-  reader.onerror = () => $("status").textContent = "Could not load the image.";
+  reader.onerror = () => setStatus("Could not load the image.");
   reader.onload = async e => {
     showPhotoThumbnail(e.target.result);
     try {
       $("btnCamera").disabled = true;
-
+      setMobileStartBusy(true);
       $("btnGen").disabled = true;
       $("btnSave").disabled = true;
-      $("status").textContent = "Loading depth estimation model...";
+      setStatus("Loading depth estimation model...");
       await depthEngine.initModel();
-      $("status").textContent = "Estimating depth from image...";
+      setStatus("Estimating depth from image...");
       const result = await depthEngine.estimate(e.target.result);
       srcImage = {
         kind: "floatHeight",
@@ -455,20 +530,18 @@ async function loadDepthFile(file){
       $("chkNoShading").checked = true;
       startGenerate();
     } catch(err) {
-      $("status").textContent = "Depth estimation failed: " + (err.message || String(err));
-      const ms = $("mStartStatus");
-      if(ms) ms.textContent = "Failed: " + (err.message || String(err));
+      setStatus("Depth estimation failed: " + (err.message || String(err)));
       $("btnGen").disabled = false;
     } finally {
       $("btnCamera").disabled = false;
-
+      setMobileStartBusy(false);
     }
   };
   reader.readAsDataURL(file);
 }
 
 const dz = $("dropZone");
-dz.addEventListener("click", () => $("depthFileInput").click());
+dz.addEventListener("click", () => openPicker("depthFileInput"));
 dz.addEventListener("dragover", e => { e.preventDefault(); dz.classList.add("over"); });
 dz.addEventListener("dragleave", () => dz.classList.remove("over"));
 dz.addEventListener("drop", e => {
@@ -482,27 +555,52 @@ document.addEventListener("paste", e => {
   const file = item?.getAsFile();
   if(!file) return;
   e.preventDefault();
-  $("status").textContent = "Pasted photo received. Preparing depth estimation...";
+  setStatus("Pasted photo received. Preparing depth estimation...");
   loadDepthFile(file);
 });
 $("fileInput").addEventListener("change", e => loadFile(e.target.files[0]));
 $("cameraInput").addEventListener("change", e => loadDepthFile(e.target.files[0]));
 $("depthFileInput").addEventListener("change", e => loadDepthFile(e.target.files[0]));
-$("btnHeight").addEventListener("click", () => $("fileInput").click());
-$("btnCamera").addEventListener("click", () => $("cameraInput").click());
+$("btnHeight").addEventListener("click", () => openPicker("fileInput"));
+$("btnCamera").addEventListener("click", () => openPicker("cameraInput"));
 
 
-// スマホスタート画面のボタン
+// スマホスタート画面のボタン (写真を選ぶ → 深度推定 → 生成)
 const mStartCamera = $("mStartCamera"), mStartPhoto = $("mStartPhoto");
 if(mStartCamera) mStartCamera.addEventListener("click", () => {
-  enableTiltDefault();
-  $("mStartStatus").textContent = "Estimating depth...";
-  $("cameraInput").click();
+  $("mStartStatus").textContent = "Waiting for a photo...";
+  openPicker("cameraInput");
 });
 if(mStartPhoto) mStartPhoto.addEventListener("click", () => {
-  enableTiltDefault();
-  $("mStartStatus").textContent = "Estimating depth...";
-  $("depthFileInput").click();
+  $("mStartStatus").textContent = "Waiting for a photo...";
+  openPicker("depthFileInput");
+});
+
+// スマホビュワーの傾き操作ボタン (iOS の許可ダイアログはタップ内で要求する)
+const mTilt = $("mTilt");
+if(mTilt) mTilt.addEventListener("click", async () => {
+  try {
+    if(viewer.tiltEnabled){
+      viewer.resetTiltCenter();
+      setStatus("Current orientation set as the center.");
+    } else {
+      await viewer.enableTilt();
+      setStatus("Tilt control enabled.");
+    }
+  } catch(err) {
+    setStatus(err.message || String(err));
+  }
+  updateMobileTiltButton();
+});
+
+// スマホビュワーからスタート画面へ戻る (別の写真をやり直せるようにする)
+const mReset = $("mReset");
+if(mReset) mReset.addEventListener("click", () => {
+  if(generator.busy) generator.abort();
+  document.body.classList.remove("viewing");
+  const bar = $("mStatus");
+  if(bar) bar.textContent = "";
+  $("mStartStatus").textContent = "";
 });
 
 // スマホ下部の奥行きスライダー (パネルの rngDepth と同期)
@@ -542,12 +640,19 @@ for(const id of ["selSize", "selChannel", "chkInvert"]){
 
 // ---------- メインループ ----------
 function updateGeneratorUI(){
-  const robust = $("selGenerator" ).value === "robust";
+  const robust = pickGeneratorMode() === "robust";
   $("rngRadius" ).disabled = robust;
   $("rngSteps" ).disabled = robust;
   $("robustHint" ).textContent = robust ? "Exact falling-edge generation; search radius and ray steps are not used." : "Approximate GPU Gems 3 generation; search radius and ray steps control quality.";
+  if(robustError){
+    const opt = $("selGenerator").querySelector("option[value=robust]");
+    if(opt) opt.disabled = true;
+    $("robustHint").textContent =
+      "Robust RCS is unavailable on this device (EXT_color_buffer_float missing). Using the legacy relaxed cone generator.";
+  }
 }
 $("selGenerator" ).addEventListener("change", updateGeneratorUI);
+if(robustError) $("selGenerator").value = "legacy";
 updateGeneratorUI();
 
 let genActive = false;
@@ -559,8 +664,7 @@ function frame(){
     generator.runChunk(30);
     $("prog").value = generator.progress;
     const el = (now - generator.t0) / 1000;
-    $("status").textContent =
-      `Generating... ${(generator.progress * 100).toFixed(0)}% (${el.toFixed(1)} sec)`;
+    setStatus(`Generating... ${(generator.progress * 100).toFixed(0)}% (${el.toFixed(1)} sec)`);
   }
   if(genActive && !generator.busy){
     finishUI(generator.progress < 1);

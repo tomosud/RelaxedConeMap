@@ -64,8 +64,7 @@ class ConeMapGenerator {
     this.coneTexOpts = this.useFloatCone
       ? { internalFormat: gl.R16F, format: gl.RED, type: gl.HALF_FLOAT }
       : { internalFormat: gl.R8, format: gl.RED, type: gl.UNSIGNED_BYTE };
-    this.syncType = this.useFloatCone ? gl.FLOAT : gl.UNSIGNED_BYTE;
-    this._syncBuf = this.useFloatCone ? new Float32Array(1) : new Uint8Array(1);
+    this._readBack = undefined;   // 実装依存の readPixels 形式 (初回に問い合わせる)
     this.heightTex = null;
     this.heightTexKind = null;
     this.ping = [null, null];
@@ -191,11 +190,28 @@ class ConeMapGenerator {
     }
   }
 
+  // R16F などから読める形式は実装依存なので、決め打ちせず問い合わせる。
+  // 誤った組み合わせは INVALID_OPERATION になり、GPU 待ちが効かなくなる。
+  _initReadBack(){
+    const gl = this.gl;
+    const format = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_FORMAT);
+    const type = gl.getParameter(gl.IMPLEMENTATION_COLOR_READ_TYPE);
+    const HALF_FLOAT_OES = 0x8D61;
+    const Buf = type === gl.FLOAT ? Float32Array
+      : (type === gl.HALF_FLOAT || type === HALF_FLOAT_OES) ? Uint16Array
+      : (type === gl.UNSIGNED_BYTE) ? Uint8Array
+      : null;
+    this._readBack = Buf ? { format, type, buf: new Buf(4) } : null;
+  }
+
   // GPU の完了を確実に待つ (gl.finish は Chrome ではブロックしないため)
   _syncGPU(){
     const gl = this.gl;
     gl.bindFramebuffer(gl.FRAMEBUFFER, this.fbo[this.cur]);
-    gl.readPixels(0, 0, 1, 1, gl.RED, this.syncType, this._syncBuf);
+    if(this._readBack === undefined) this._initReadBack();
+    if(!this._readBack) return;   // 読み出せない環境ではペース調整のみ諦める
+    const { format, type, buf } = this._readBack;
+    gl.readPixels(0, 0, 1, 1, format, type, buf);
   }
 
   // budgetMs を目安にパスを進める (フレーム毎に呼ぶ)

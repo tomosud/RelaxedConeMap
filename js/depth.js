@@ -4,9 +4,23 @@
  */
 
 class DepthEngine {
-  constructor() {
+  /**
+   * @param {Object} [options]
+   * @param {boolean} [options.preferLightModel] Try the small quantized model first
+   *   (phones run out of memory on the 100MB+ external-data model).
+   * @param {number} [options.maxSizeLimit] Extra cap on the inference resolution.
+   * @param {function(string):void} [options.onStatus] Progress text sink.
+   */
+  constructor(options = {}) {
     this.session = null;
     this.modelInfo = null;
+    this.preferLightModel = !!options.preferLightModel;
+    this.maxSizeLimit = options.maxSizeLimit || 0;
+    this.onStatus = typeof options.onStatus === 'function' ? options.onStatus : null;
+  }
+
+  report(text) {
+    if (this.onStatus) this.onStatus(text);
   }
 
   /**
@@ -14,11 +28,15 @@ class DepthEngine {
    */
   async initModel() {
     if (this.session) return this.session;
+    if (typeof ort === 'undefined') {
+      throw new Error('ONNX Runtime could not be loaded. Please check your network connection.');
+    }
 
     const modelOptions = [
       {
         path: './model/da3/model.onnx',
         name: 'Local Depth Anything V3 Small',
+        heavy: true,
         externalData: [{ path: 'model.onnx_data', data: './model/da3/model.onnx_data' }],
         inputName: 'pixel_values',
         outputName: 'predicted_depth',
@@ -31,6 +49,7 @@ class DepthEngine {
       {
         path: 'model/da3/model.onnx',
         name: 'Local Depth Anything V3 Small (relative)',
+        heavy: true,
         externalData: [{ path: 'model.onnx_data', data: 'model/da3/model.onnx_data' }],
         inputName: 'pixel_values',
         outputName: 'predicted_depth',
@@ -64,10 +83,17 @@ class DepthEngine {
       }
     ];
 
+    // Phones cannot hold the large external-data model in memory, so load the
+    // small quantized model first there and keep the large one as a fallback.
+    const ordered = this.preferLightModel
+      ? [...modelOptions.filter(o => !o.heavy), ...modelOptions.filter(o => o.heavy)]
+      : modelOptions;
+
     let lastError = null;
-    for (const option of modelOptions) {
+    for (const option of ordered) {
       try {
         console.log(`Trying to load model: ${option.name} from ${option.path}`);
+        this.report(`Loading depth model: ${option.name}...`);
         const sessionOptions = {
           executionProviders: ['wasm'],
           graphOptimizationLevel: 'all',
@@ -91,7 +117,8 @@ class DepthEngine {
    */
   resizeImage(img) {
     const modelInfo = this.modelInfo || {};
-    const maxSize = modelInfo.maxSize || 512;
+    let maxSize = modelInfo.maxSize || 512;
+    if (this.maxSizeLimit) maxSize = Math.min(maxSize, this.maxSizeLimit);
     const alignTo = modelInfo.alignTo || 1;
     let width = img.width;
     let height = img.height;
